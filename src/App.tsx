@@ -25,6 +25,14 @@ import {
   mockEvaluationResults,
   AFFILIATES
 } from './data/mockData';
+import { db, isFirebaseConfigured } from './firebase';
+import { 
+  collection, 
+  doc, 
+  setDoc, 
+  updateDoc, 
+  onSnapshot 
+} from 'firebase/firestore';
 import type { 
   User,
   Candidate,
@@ -88,6 +96,127 @@ export default function App() {
   const [securityChecks, setSecurityChecks] = useState<SecurityCheck[]>(mockSecurityChecks);
   const [scoresList, setScoresList] = useState<Score[]>(mockScores);
   const [evaluationResults, setEvaluationResults] = useState<EvaluationResult[]>(mockEvaluationResults);
+
+  // Load data from Firebase if configured, otherwise fallback to local seed data
+  useEffect(() => {
+    if (!isFirebaseConfigured || !db) {
+      console.log('Firebase is not configured. Running in Local Memory Database mode.');
+      return;
+    }
+
+    console.log('Firebase VITE env config detected. Connecting to Cloud Firestore...');
+
+    // 1. Subscribe to candidates collection
+    const unsubscribeCandidates = onSnapshot(collection(db, 'candidates'), (snapshot) => {
+      const list: Candidate[] = [];
+      snapshot.forEach((doc) => {
+        list.push({ ...doc.data(), id: doc.id } as Candidate);
+      });
+      
+      // Self-healing seeding: if Cloud database is empty, seed it with mockData
+      if (list.length === 0) {
+        console.log('Firestore is empty. Seeding initial candidate data...');
+        seedFirestoreData();
+      } else {
+        setCandidatesList(list);
+      }
+    });
+
+    // 2. Subscribe to submissions collection
+    const unsubscribeSubmissions = onSnapshot(collection(db, 'submissions'), (snapshot) => {
+      const list: Submission[] = [];
+      snapshot.forEach((doc) => {
+        list.push({ ...doc.data(), id: doc.id } as Submission);
+      });
+      if (list.length > 0) {
+        setSubmissionsList(list);
+      }
+    });
+
+    // 3. Subscribe to committees collection
+    const unsubscribeCommittees = onSnapshot(collection(db, 'committees'), (snapshot) => {
+      const list: Committee[] = [];
+      snapshot.forEach((doc) => {
+        list.push({ ...doc.data(), id: doc.id } as Committee);
+      });
+      if (list.length > 0) {
+        setCommitteesList(list);
+      }
+    });
+
+    // 4. Subscribe to securityChecks collection
+    const unsubscribeSecurityChecks = onSnapshot(collection(db, 'securityChecks'), (snapshot) => {
+      const list: SecurityCheck[] = [];
+      snapshot.forEach((doc) => {
+        list.push({ ...doc.data(), id: doc.id } as SecurityCheck);
+      });
+      if (list.length > 0) {
+        setSecurityChecks(list);
+      }
+    });
+
+    // 5. Subscribe to scores collection
+    const unsubscribeScores = onSnapshot(collection(db, 'scores'), (snapshot) => {
+      const list: Score[] = [];
+      snapshot.forEach((doc) => {
+        list.push({ ...doc.data(), id: doc.id } as Score);
+      });
+      if (list.length > 0) {
+        setScoresList(list);
+      }
+    });
+
+    // 6. Subscribe to evaluationResults collection
+    const unsubscribeEvaluationResults = onSnapshot(collection(db, 'evaluationResults'), (snapshot) => {
+      const list: EvaluationResult[] = [];
+      snapshot.forEach((doc) => {
+        list.push(doc.data() as EvaluationResult);
+      });
+      if (list.length > 0) {
+        setEvaluationResults(list);
+      }
+    });
+
+    return () => {
+      unsubscribeCandidates();
+      unsubscribeSubmissions();
+      unsubscribeCommittees();
+      unsubscribeSecurityChecks();
+      unsubscribeScores();
+      unsubscribeEvaluationResults();
+    };
+  }, []);
+
+  // Seeding routine for new Firebase projects
+  const seedFirestoreData = async () => {
+    if (!db) return;
+    try {
+      console.log('Starting Cloud database migration seeding...');
+
+      for (const item of initialCandidates) {
+        await setDoc(doc(db, 'candidates', item.id), item);
+      }
+      for (const item of initialSubmissions) {
+        await setDoc(doc(db, 'submissions', item.id), item);
+      }
+      for (const item of initialCommittees) {
+        await setDoc(doc(db, 'committees', item.id), item);
+      }
+      for (const item of mockSecurityChecks) {
+        await setDoc(doc(db, 'securityChecks', item.id), item);
+      }
+      for (const item of mockScores) {
+        await setDoc(doc(db, 'scores', item.id), item);
+      }
+      for (const item of mockEvaluationResults) {
+        await setDoc(doc(db, 'evaluationResults', item.candidateId), item);
+      }
+
+      console.log('Database migration seeding successfully completed.');
+    } catch (error) {
+      console.error('Error migrating/seeding data to Cloud Firestore:', error);
+    }
+  };
 
   // Admin Add Candidate Form State
   const [showAddForm, setShowAddForm] = useState(false);
@@ -229,6 +358,19 @@ export default function App() {
       }
     ];
     setSecurityChecks([...securityChecks, ...newSecurityChecks]);
+
+    if (isFirebaseConfigured && db) {
+      try {
+        setDoc(doc(db, 'candidates', nextCandId), newCandidate);
+        setDoc(doc(db, 'submissions', nextSubId), newSubmission);
+        setDoc(doc(db, 'committees', nextCommId), newCommittee);
+        newSecurityChecks.forEach(sc => {
+          setDoc(doc(db, 'securityChecks', sc.id), sc);
+        });
+      } catch (e) {
+        console.error('Error writing new registration to Firestore:', e);
+      }
+    }
 
     setNewCandName('');
     setNewCandEmail('');
@@ -408,6 +550,10 @@ export default function App() {
     }
     setScoresList(updatedScores);
 
+    if (isFirebaseConfigured && db) {
+      setDoc(doc(db, 'scores', newScore.id), newScore).catch(console.error);
+    }
+
     // 3. Update Security Check
     const newSecCheck: SecurityCheck = {
       id: `sec_${currentSubmission.id}_${currentUser.id}`,
@@ -429,6 +575,10 @@ export default function App() {
       updatedSec.push(newSecCheck);
     }
     setSecurityChecks(updatedSec);
+
+    if (isFirebaseConfigured && db) {
+      setDoc(doc(db, 'securityChecks', newSecCheck.id), newSecCheck).catch(console.error);
+    }
 
     // 4. Check if all 3 panel reviewers have submitted scores
     const allScoresForCom = updatedScores.filter(s => s.committeeId === currentCommittee.id);
@@ -482,6 +632,13 @@ export default function App() {
         updatedCands[candIdx].status = '완료';
         setCandidatesList(updatedCands);
       }
+
+      // [FIREBASE] Write evaluation result and update candidate/committee status to 완료
+      if (isFirebaseConfigured && db) {
+        setDoc(doc(db, 'evaluationResults', selectedCandidate.id), finalResult).catch(console.error);
+        updateDoc(doc(db, 'candidates', selectedCandidate.id), { status: '완료' }).catch(console.error);
+        updateDoc(doc(db, 'committees', currentCommittee.id), { status: '완료' }).catch(console.error);
+      }
     } else {
       // Update Candidate Status to '평가중'
       const candIdx = candidatesList.findIndex(c => c.id === selectedCandidate.id);
@@ -489,6 +646,12 @@ export default function App() {
         let updatedCands = [...candidatesList];
         updatedCands[candIdx].status = '평가중';
         setCandidatesList(updatedCands);
+
+        // [FIREBASE] Update status to 평가중
+        if (isFirebaseConfigured && db) {
+          updateDoc(doc(db, 'candidates', selectedCandidate.id), { status: '평가중' }).catch(console.error);
+          updateDoc(doc(db, 'committees', currentCommittee.id), { status: '평가중' }).catch(console.error);
+        }
       }
     }
 
