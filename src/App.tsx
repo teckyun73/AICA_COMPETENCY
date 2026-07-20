@@ -816,38 +816,38 @@ export default function App() {
                 </button>
               </form>
 
-              {/* Collapsable cheat sheet of mock users */}
-              <div className="hint-box">
-                <div className="hint-title" onClick={() => setShowHint(!showHint)}>
-                  <span>💡 [심사위원/간사 테스트 계정 정보 보기]</span>
-                  <span>{showHint ? '▲' : '▼'}</span>
-                </div>
-                {showHint && (
-                  <div className="hint-list">
-                    <div style={{ fontWeight: 'bold', color: 'white', marginBottom: '0.25rem', fontSize: '0.75rem' }}>[운영간사 계정]</div>
-                    <div className="hint-item"><span>이동운 (경영혁신실)</span> <code style={{ color: 'var(--accent-secondary)' }}>dwlee@ateccn.kr</code></div>
-                    <div className="hint-item"><span>우창흔 (경영혁신실)</span> <code style={{ color: 'var(--accent-secondary)' }}>chwu@ateccn.kr</code></div>
-                    
-                    <div style={{ fontWeight: 'bold', color: 'white', marginTop: '0.5rem', marginBottom: '0.25rem', fontSize: '0.75rem' }}>[현업·사업성 심사위원]</div>
-                    <div className="hint-item"><span>이재윤 (마케팅실)</span> <code style={{ color: 'var(--accent-secondary)' }}>jylee04@atec.kr</code></div>
-                    <div className="hint-item"><span>신종찬 (고객지원사업부)</span> <code style={{ color: 'var(--accent-secondary)' }}>jcshin@atecmobility.com</code></div>
-                    <div className="hint-item"><span>이상영 (경영지원실)</span> <code style={{ color: 'var(--accent-secondary)' }}>sylee01@atecsystem.kr</code></div>
-                    <div className="hint-item"><span>김보람 (경영지원실)</span> <code style={{ color: 'var(--accent-secondary)' }}>brkim@ateccomputer.kr</code></div>
-                    
-                    <div style={{ fontWeight: 'bold', color: 'white', marginTop: '0.5rem', marginBottom: '0.25rem', fontSize: '0.75rem' }}>[AI·기술 심사위원]</div>
-                    <div className="hint-item"><span>오인환 (연구소)</span> <code style={{ color: 'var(--accent-secondary)' }}>inhwan55@naver.com</code></div>
-                    <div className="hint-item"><span>백재승 (연구소)</span> <code style={{ color: 'var(--accent-secondary)' }}>jspaek@atecmobility.com</code></div>
-                    <div className="hint-item"><span>김영 (서비스사업부)</span> <code style={{ color: 'var(--accent-secondary)' }}>young@atecsystem.kr</code></div>
-                    <div className="hint-item"><span>최봉재 (연구실)</span> <code style={{ color: 'var(--accent-secondary)' }}>bjchoi@ateccomputer.kr</code></div>
-                    
-                    <div style={{ fontWeight: 'bold', color: 'white', marginTop: '0.5rem', marginBottom: '0.25rem', fontSize: '0.75rem' }}>[보안·거버넌스 심사위원]</div>
-                    <div className="hint-item"><span>이태훈 (경영지원실)</span> <code style={{ color: 'var(--accent-secondary)' }}>leetaehoon@atec.kr</code></div>
-                    <div className="hint-item"><span>이찬영 (경영지원팀)</span> <code style={{ color: 'var(--accent-secondary)' }}>cy_lee@atecmobility.com</code></div>
-                    <div className="hint-item"><span>서민규 (서비스사업부)</span> <code style={{ color: 'var(--accent-secondary)' }}>mkseo@atecsystem.kr</code></div>
-                    <div className="hint-item"><span>장성훈 (경영지원실)</span> <code style={{ color: 'var(--accent-secondary)' }}>shjang01@ateccomputer.kr</code></div>
+              {/* Collapsable cheat sheet of mock users (Development Mode Only) */}
+              {import.meta.env.DEV && (
+                <div className="hint-box">
+                  <div className="hint-title" onClick={() => setShowHint(!showHint)}>
+                    <span>💡 [심사위원/간사 테스트 계정 정보 보기]</span>
+                    <span>{showHint ? '▲' : '▼'}</span>
                   </div>
-                )}
-              </div>
+                  {showHint && (
+                    <div className="hint-list">
+                      <div style={{ fontWeight: 'bold', color: 'white', marginBottom: '0.25rem', fontSize: '0.75rem' }}>[운영간사 계정]</div>
+                      {initialUsers.filter(u => u.role === 'admin').map(u => (
+                        <div className="hint-item" key={u.id}><span>{u.name} ({u.dept})</span> <code style={{ color: 'var(--accent-secondary)' }}>{u.email}</code></div>
+                      ))}
+                      
+                      <div style={{ fontWeight: 'bold', color: 'white', marginTop: '0.5rem', marginBottom: '0.25rem', fontSize: '0.75rem' }}>[현업·사업성 심사위원]</div>
+                      {initialUsers.filter(u => u.role === 'reviewer' && u.specialty === 'business').map(u => (
+                        <div className="hint-item" key={u.id}><span>{u.name} ({u.dept})</span> <code style={{ color: 'var(--accent-secondary)' }}>{u.email}</code></div>
+                      ))}
+                      
+                      <div style={{ fontWeight: 'bold', color: 'white', marginTop: '0.5rem', marginBottom: '0.25rem', fontSize: '0.75rem' }}>[AI·기술 심사위원]</div>
+                      {initialUsers.filter(u => u.role === 'reviewer' && u.specialty === 'tech').map(u => (
+                        <div className="hint-item" key={u.id}><span>{u.name} ({u.dept})</span> <code style={{ color: 'var(--accent-secondary)' }}>{u.email}</code></div>
+                      ))}
+                      
+                      <div style={{ fontWeight: 'bold', color: 'white', marginTop: '0.5rem', marginBottom: '0.25rem', fontSize: '0.75rem' }}>[보안·거버넌스 심사위원]</div>
+                      {initialUsers.filter(u => u.role === 'reviewer' && u.specialty === 'security').map(u => (
+                        <div className="hint-item" key={u.id}><span>{u.name} ({u.dept})</span> <code style={{ color: 'var(--accent-secondary)' }}>{u.email}</code></div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         ) : (
