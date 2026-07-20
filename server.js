@@ -1,6 +1,10 @@
-const http = require('http');
-const fs = require('fs');
-const path = require('path');
+import http from 'http';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const PORT = process.env.PORT || 8080;
 const DIST_DIR = path.join(__dirname, 'dist');
@@ -20,7 +24,7 @@ const MIME_TYPES = {
 
 const server = http.createServer((req, res) => {
   // Normalize URL path to prevent directory traversal
-  let safeSuffix = path.normalize(req.url).replace(/^(\.\.[\/\\])+/, '');
+  let safeSuffix = path.normalize(req.url || '').replace(/^(\.\.[\/\\])+/, '');
   if (safeSuffix === '/' || safeSuffix === '\\') {
     safeSuffix = '/index.html';
   }
