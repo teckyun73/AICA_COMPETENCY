@@ -2258,17 +2258,23 @@ export default function App() {
                 <div>
                   <span style={{ fontSize: '0.8rem', color: '#64748b' }}>심사위원회 현업위원</span>
                   <div style={{ height: '50px' }}></div>
-                  <strong style={{ fontSize: '0.95rem' }}>홍 길 동 (인)</strong>
+                  <strong style={{ fontSize: '0.95rem' }}>
+                    {initialUsers.find(u => u.id === currentCommittee?.reviewer1Id)?.name || '미정'} (인)
+                  </strong>
                 </div>
                 <div>
                   <span style={{ fontSize: '0.8rem', color: '#64748b' }}>심사위원회 기술위원</span>
                   <div style={{ height: '50px' }}></div>
-                  <strong style={{ fontSize: '0.95rem' }}>강 감 찬 (인)</strong>
+                  <strong style={{ fontSize: '0.95rem' }}>
+                    {initialUsers.find(u => u.id === currentCommittee?.reviewer2Id)?.name || '미정'} (인)
+                  </strong>
                 </div>
                 <div>
                   <span style={{ fontSize: '0.8rem', color: '#64748b' }}>심사위원회 보안위원</span>
                   <div style={{ height: '50px' }}></div>
-                  <strong style={{ fontSize: '0.95rem' }}>이 순 신 (인)</strong>
+                  <strong style={{ fontSize: '0.95rem' }}>
+                    {initialUsers.find(u => u.id === currentCommittee?.reviewer3Id)?.name || '미정'} (인)
+                  </strong>
                 </div>
               </div>
             </div>
