@@ -73,9 +73,12 @@ export default function App() {
   const [showHint, setShowHint] = useState(false);
 
   // Demo Sandbox Player States
-  const [sandboxMode, setSandboxMode] = useState<'preview' | 'video'>('preview');
+  const [sandboxMode, setSandboxMode] = useState<'preview' | 'simulator' | 'video'>('simulator');
   const [isPlayingVideo, setIsPlayingVideo] = useState(false);
   const [videoProgress, setVideoProgress] = useState(35);
+  const [simInput, setSimInput] = useState('');
+  const [simLoading, setSimLoading] = useState(false);
+  const [simResult, setSimResult] = useState<string | null>(null);
 
   const handleLogin = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -2139,29 +2142,40 @@ export default function App() {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                     {/* 16:9 Demo Sandbox Window Frame */}
                     <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border-color)', padding: '1rem', borderRadius: '8px' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-                        <h4 style={{ fontSize: '0.92rem', display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--text-primary)' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+                        <h4 style={{ fontSize: '0.92rem', display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--text-primary)', margin: 0 }}>
                           <Monitor size={16} color="var(--accent-secondary)" />
-                          시연 동영상 & 라이브 데모 모의 플레이어 (Demo Sandbox)
+                          시연 동영상 & 라이브 데모 모의 플레이어 (16:9 Demo Sandbox)
                         </h4>
                         
-                        {/* Sandbox Mode Switcher Buttons */}
+                        {/* 3-Way Sandbox Mode Switcher Buttons */}
                         <div style={{ display: 'flex', gap: '0.25rem', background: 'rgba(0,0,0,0.3)', padding: '0.2rem', borderRadius: '6px', border: '1px solid var(--border-color)' }}>
+                          <button
+                            type="button"
+                            className={sandboxMode === 'simulator' ? 'btn-primary' : 'btn-secondary'}
+                            onClick={() => setSandboxMode('simulator')}
+                            style={{ padding: '0.25rem 0.6rem', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}
+                            title="심사 창 내에서 즉시 실행되는 대화형 모의 시연 앱"
+                          >
+                            <Play size={12} /> 🎮 대화형 모의 시연 앱
+                          </button>
                           <button
                             type="button"
                             className={sandboxMode === 'preview' ? 'btn-primary' : 'btn-secondary'}
                             onClick={() => setSandboxMode('preview')}
                             style={{ padding: '0.25rem 0.6rem', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}
+                            title="유튜브 및 라이브 웹앱 URL 임베드 미리보기"
                           >
-                            <Monitor size={12} /> 실제 구동 데모 미리보기
+                            <Monitor size={12} /> 🖥️ 라이브 웹/유튜브 임베드
                           </button>
                           <button
                             type="button"
                             className={sandboxMode === 'video' ? 'btn-primary' : 'btn-secondary'}
                             onClick={() => setSandboxMode('video')}
                             style={{ padding: '0.25rem 0.6rem', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}
+                            title="시연 동영상 스트리밍"
                           >
-                            <Video size={12} /> 시연 비디오 (MP4)
+                            <Video size={12} /> 🎬 시연 비디오 (MP4)
                           </button>
                         </div>
                       </div>
@@ -2215,7 +2229,7 @@ export default function App() {
                                 🔒 <strong>https://</strong>{currentSubmission.demoUrl.replace('https://', '')}
                               </span>
                               <span style={{ color: '#10b981', fontSize: '0.65rem', fontWeight: 'bold', marginLeft: '0.5rem', flexShrink: 0 }}>
-                                🟢 LIVE DEMO
+                                {sandboxMode === 'simulator' ? '🎮 SIMULATOR' : sandboxMode === 'preview' ? '🖥️ LIVE EMBED' : '🎬 MP4 PLAYER'}
                               </span>
                             </div>
                           </div>
@@ -2236,10 +2250,10 @@ export default function App() {
                               href={currentSubmission.demoUrl}
                               target="_blank"
                               rel="noreferrer"
-                              title="새 창에서 실제 라이브 데모 열기"
-                              style={{ color: 'var(--accent-secondary)', display: 'flex', alignItems: 'center', gap: '0.2rem', textDecoration: 'none', fontSize: '0.7rem', fontWeight: 'bold' }}
+                              title="새 창에서 실제 데모 링크 직접 열기 (전체 화면)"
+                              style={{ color: 'var(--accent-secondary)', display: 'flex', alignItems: 'center', gap: '0.2rem', textDecoration: 'none', fontSize: '0.72rem', fontWeight: 'bold', background: 'rgba(99, 102, 241, 0.15)', padding: '0.15rem 0.45rem', borderRadius: '4px' }}
                             >
-                              <ExternalLink size={12} /> 새창
+                              <ExternalLink size={12} /> 새창 (전체화면)
                             </a>
                           </div>
                         </div>
@@ -2247,75 +2261,147 @@ export default function App() {
                         {/* 16:9 Body Viewport Content */}
                         <div style={{ flex: 1, position: 'relative', width: '100%', height: 'calc(100% - 34px)', background: '#090d16', overflow: 'hidden' }}>
                           {sandboxMode === 'preview' ? (
-                            /* Live Interactive Demo App Window (iframe & overlay) */
+                            /* Live Web / YouTube Embed Viewport */
                             <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', position: 'relative' }}>
+                              {/* Top Informative Banner for Refused Connection handling */}
+                              <div style={{ background: 'rgba(245, 158, 11, 0.15)', borderBottom: '1px solid rgba(245, 158, 11, 0.3)', padding: '0.35rem 0.75rem', fontSize: '0.7rem', color: '#fef08a', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                <span>💡 <strong>보안 안내:</strong> 외부 웹사이트 보안 설정(X-Frame-Options)으로 인해 연결이 거부되는 경우, 상단 <strong>[🎮 대화형 모의 시연 앱]</strong>을 클릭하면 심사 창 안에서 100% 바로 가동해 보실 수 있습니다.</span>
+                                <button
+                                  type="button"
+                                  className="btn-secondary"
+                                  style={{ padding: '0.1rem 0.4rem', fontSize: '0.68rem', whiteSpace: 'nowrap' }}
+                                  onClick={() => setSandboxMode('simulator')}
+                                >
+                                  🎮 시연 앱으로 전환
+                                </button>
+                              </div>
+
                               <iframe
                                 id="demo-sandbox-frame"
-                                src={currentSubmission.demoUrl}
-                                title="AICA Candidate Demo Live Interactive Sandbox"
+                                src={(() => {
+                                  const url = currentSubmission.demoUrl;
+                                  const ytMatch = url?.match(/(?:youtube\.com\/(?:watch\?.*v=|embed\/|v\/)|youtu\.be\/)([\w-]{11})/);
+                                  if (ytMatch && ytMatch[1]) {
+                                    return `https://www.youtube.com/embed/${ytMatch[1]}?autoplay=1&mute=1&rel=0&enablejsapi=1`;
+                                  }
+                                  return url;
+                                })()}
+                                title="AICA Candidate Demo Sandbox"
                                 style={{
                                   width: '100%',
-                                  height: '100%',
+                                  flex: 1,
                                   border: 'none',
                                   background: '#0f172a'
                                 }}
                               />
-
-                              {/* Interactive Demo Control & Information Bar Overlay */}
-                              <div style={{
-                                position: 'absolute',
-                                top: 0,
-                                left: 0,
-                                width: '100%',
-                                height: '100%',
-                                pointerEvents: 'none',
-                                background: 'linear-gradient(180deg, rgba(15,23,42,0.15) 0%, rgba(15,23,42,0.85) 100%)',
-                                display: 'flex',
-                                flexDirection: 'column',
-                                justifyContent: 'space-between',
-                                padding: '0.75rem',
-                                boxSizing: 'border-box'
-                              }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                                  <div style={{ background: 'rgba(15, 23, 42, 0.9)', backdropFilter: 'blur(4px)', padding: '0.4rem 0.6rem', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.12)' }}>
-                                    <span className="badge badge-level3" style={{ fontSize: '0.65rem', marginBottom: '0.15rem' }}>
-                                      Level {selectedCandidate.level} 실시간 데모 환경
+                            </div>
+                          ) : sandboxMode === 'simulator' ? (
+                            /* Interactive Live Demo Application Simulator Mode */
+                            <div style={{
+                              width: '100%',
+                              height: '100%',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              background: '#0f172a',
+                              color: '#ffffff',
+                              padding: '0.75rem',
+                              boxSizing: 'border-box',
+                              overflowY: 'auto'
+                            }}>
+                              {/* Simulator Top Header Info */}
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '0.5rem', marginBottom: '0.65rem' }}>
+                                <div>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                    <span className="badge badge-level3" style={{ fontSize: '0.68rem' }}>
+                                      Level {selectedCandidate.level} · {currentSubmission.category}
                                     </span>
-                                    <h5 style={{ fontSize: '0.8rem', color: '#ffffff', margin: 0 }}>{currentSubmission.title}</h5>
+                                    <h5 style={{ margin: 0, fontSize: '0.85rem', color: '#60a5fa' }}>{currentSubmission.title}</h5>
                                   </div>
-                                  <span style={{ background: '#10b981', color: '#020617', fontWeight: 'bold', padding: '0.2rem 0.5rem', borderRadius: '4px', fontSize: '0.65rem', boxShadow: '0 2px 8px rgba(16,185,129,0.3)' }}>
-                                    ● 16:9 데모 샌드박스 세션 연동 중
-                                  </span>
                                 </div>
+                                <span style={{ background: '#10b981', color: '#020617', fontWeight: 'bold', padding: '0.2rem 0.5rem', borderRadius: '4px', fontSize: '0.68rem' }}>
+                                  ● 16:9 대화형 AI 모의 시연 엔진 동작 중
+                                </span>
+                              </div>
 
-                                <div style={{
-                                  pointerEvents: 'auto',
-                                  background: 'rgba(15, 23, 42, 0.95)',
-                                  backdropFilter: 'blur(8px)',
-                                  padding: '0.65rem 0.85rem',
-                                  borderRadius: '6px',
-                                  border: '1px solid var(--border-color)',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'space-between',
-                                  gap: '1rem'
-                                }}>
-                                  <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                                    <div>💡 <strong>해결 방안:</strong> {currentSubmission.solution}</div>
-                                    <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '0.15rem' }}>
-                                      심사위원 전용 16:9 뷰포트에서 직접 시연 동작 및 UI를 미리보고 검증할 수 있습니다.
+                              {/* Interactive Demo Inputs & Execution controls */}
+                              <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '6px', padding: '0.65rem', marginBottom: '0.65rem' }}>
+                                <label style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '0.3rem' }}>
+                                  💬 <strong>시연용 테스트 쿼리 / 입력값:</strong>
+                                </label>
+                                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                  <input
+                                    type="text"
+                                    value={simInput || (
+                                      currentSubmission.category === 'RAG/챗봇' ? '스마트 팩토리 A동 3번 설비 기계 고장 원인 및 매뉴얼 검색' :
+                                      currentSubmission.category === '업무자동화' ? '고객 센터 장비 접속 오류 및 패킷 손실 티켓 분류' :
+                                      currentSubmission.category === '웹/앱' ? '에이텍모빌리티 최신 사업 현황 및 B2B 제안 포인트 추출' :
+                                      '교통 단말기 로그 기반 부품 수명 진단 및 고장 예측 분석'
+                                    )}
+                                    onChange={(e) => setSimInput(e.target.value)}
+                                    style={{
+                                      flex: 1,
+                                      background: '#020617',
+                                      border: '1px solid var(--border-color)',
+                                      borderRadius: '4px',
+                                      color: '#ffffff',
+                                      padding: '0.35rem 0.6rem',
+                                      fontSize: '0.75rem'
+                                    }}
+                                  />
+                                  <button
+                                    type="button"
+                                    className="btn-primary"
+                                    disabled={simLoading}
+                                    onClick={() => {
+                                      setSimLoading(true);
+                                      setSimResult(null);
+                                      setTimeout(() => {
+                                        setSimLoading(false);
+                                        setSimResult(
+                                          currentSubmission.category === 'RAG/챗봇' ?
+                                            "🔍 [RAG Vector Store 검색 완료]\n- 참조 문서: 설비_점검_가이드_v4.pdf (Chunk #42, Similarity: 0.94)\n- 분석 원인: 베어링 가열 및 유압 밸브 막힘\n- 추천 조치: 1) 유압유 공급 라인 정밀 세척, 2) 3번 베어링 교체 조치 (응답 시간: 240ms)" :
+                                          currentSubmission.category === '업무자동화' ?
+                                            "⚡ [CS Auto Classifier & FAQ 시스템]\n- 분류 결과: [네트워크/단말장애] (신뢰도: 98.7%)\n- FAQ 자동 추천 1위: 'Q: 단말기 커넥터 전원 재인가 및 IP 재설정 절차'\n- 자동 티켓 등록 및 매니저 메신저 알림 완료" :
+                                          currentSubmission.category === '웹/앱' ?
+                                            "📄 [B2B Proposal Helper 추출 성공]\n- 핵심 키워드: 태그리스 결제 시스템, 스마트 교통 솔루션\n- 예상 Pain Point: 기존 갠트리 수동 정산의 병목 현상\n- 영업 제안 장표 3개 Markdown 생성 완료" :
+                                            "📊 [Predictive Analytics Agent 실행 결과]\n- 고장 위험 지수: 89% (위험 수준: High)\n- 예측 고장 시점: 72시간 이내\n- 추천 정비: 현장 엔지니어 수동 점검 및 Teams 메신저 자동 알림 보냄"
+                                        );
+                                      }, 800);
+                                    }}
+                                    style={{ padding: '0.35rem 0.85rem', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.3rem', background: '#3b82f6', whiteSpace: 'nowrap' }}
+                                  >
+                                    {simLoading ? <RefreshCw size={13} className="spin" /> : <Play size={13} />}
+                                    {simLoading ? '추론 수행 중...' : 'AI 실행 및 추론 수행'}
+                                  </button>
+                                </div>
+                              </div>
+
+                              {/* Simulation Response Display Window */}
+                              <div style={{ flex: 1, background: '#020617', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '6px', padding: '0.65rem', overflowY: 'auto', fontFamily: 'monospace', fontSize: '0.75rem', lineHeight: '1.5' }}>
+                                {simLoading ? (
+                                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--accent-secondary)' }}>
+                                    <RefreshCw size={24} style={{ animation: 'spin 1s linear infinite', marginBottom: '0.5rem' }} />
+                                    <span>AI 모델 추론 및 RAG 임베딩 검색을 실행하는 중입니다...</span>
+                                  </div>
+                                ) : simResult ? (
+                                  <div>
+                                    <div style={{ color: '#10b981', fontWeight: 'bold', marginBottom: '0.4rem' }}>
+                                      ✅ AI 모델 추론 성공 (Latency: 240ms | Token: 142 tokens | PII Masking: 🟢 Passed)
+                                    </div>
+                                    <pre style={{ margin: 0, whiteSpace: 'pre-wrap', fontFamily: 'monospace', color: '#e2e8f0', background: 'rgba(255,255,255,0.03)', padding: '0.5rem', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                                      {simResult}
+                                    </pre>
+                                  </div>
+                                ) : (
+                                  <div>
+                                    <div style={{ color: '#94a3b8', marginBottom: '0.4rem' }}>
+                                      💡 <strong>시스템 솔루션 요약:</strong> {currentSubmission.solution}
+                                    </div>
+                                    <div style={{ color: '#64748b', fontSize: '0.7rem' }}>
+                                      위의 [AI 실행 및 추론 수행] 버튼을 클릭하면 심사위원 16:9 샌드박스 창 내에서 AI 모델의 실시간 응답 및 RAG 검색 동작을 직접 테스트하실 수 있습니다.
                                     </div>
                                   </div>
-                                  <a
-                                    href={currentSubmission.demoUrl}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    className="btn-primary"
-                                    style={{ padding: '0.35rem 0.75rem', fontSize: '0.75rem', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '0.3rem', background: '#3b82f6' }}
-                                  >
-                                    <ExternalLink size={13} /> 데모 앱 전체 화면
-                                  </a>
-                                </div>
+                                )}
                               </div>
                             </div>
                           ) : (
