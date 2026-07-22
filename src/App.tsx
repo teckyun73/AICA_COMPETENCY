@@ -13,7 +13,9 @@ import {
   Award,
   ShieldCheck,
   BookOpen,
-  Scale
+  Scale,
+  Database,
+  RotateCcw
 } from 'lucide-react';
 import { 
   users as initialUsers, 
@@ -31,7 +33,9 @@ import {
   doc, 
   setDoc, 
   updateDoc, 
-  onSnapshot 
+  onSnapshot,
+  getDocs,
+  deleteDoc
 } from 'firebase/firestore';
 import type { 
   User,
@@ -112,14 +116,7 @@ export default function App() {
       snapshot.forEach((doc) => {
         list.push({ ...doc.data(), id: doc.id } as Candidate);
       });
-      
-      // Self-healing seeding: if Cloud database is empty, seed it with mockData
-      if (list.length === 0) {
-        console.log('Firestore is empty. Seeding initial candidate data...');
-        seedFirestoreData();
-      } else {
-        setCandidatesList(list);
-      }
+      setCandidatesList(list);
     });
 
     // 2. Subscribe to submissions collection
@@ -128,9 +125,7 @@ export default function App() {
       snapshot.forEach((doc) => {
         list.push({ ...doc.data(), id: doc.id } as Submission);
       });
-      if (list.length > 0) {
-        setSubmissionsList(list);
-      }
+      setSubmissionsList(list);
     });
 
     // 3. Subscribe to committees collection
@@ -139,9 +134,7 @@ export default function App() {
       snapshot.forEach((doc) => {
         list.push({ ...doc.data(), id: doc.id } as Committee);
       });
-      if (list.length > 0) {
-        setCommitteesList(list);
-      }
+      setCommitteesList(list);
     });
 
     // 4. Subscribe to securityChecks collection
@@ -150,9 +143,7 @@ export default function App() {
       snapshot.forEach((doc) => {
         list.push({ ...doc.data(), id: doc.id } as SecurityCheck);
       });
-      if (list.length > 0) {
-        setSecurityChecks(list);
-      }
+      setSecurityChecks(list);
     });
 
     // 5. Subscribe to scores collection
@@ -161,9 +152,7 @@ export default function App() {
       snapshot.forEach((doc) => {
         list.push({ ...doc.data(), id: doc.id } as Score);
       });
-      if (list.length > 0) {
-        setScoresList(list);
-      }
+      setScoresList(list);
     });
 
     // 6. Subscribe to evaluationResults collection
@@ -172,9 +161,7 @@ export default function App() {
       snapshot.forEach((doc) => {
         list.push(doc.data() as EvaluationResult);
       });
-      if (list.length > 0) {
-        setEvaluationResults(list);
-      }
+      setEvaluationResults(list);
     });
 
     return () => {
@@ -187,35 +174,82 @@ export default function App() {
     };
   }, []);
 
-  // Seeding routine for new Firebase projects
-  const seedFirestoreData = async () => {
-    if (!db) return;
-    try {
-      console.log('Starting Cloud database migration seeding...');
+  // Load simulation data to Firebase Cloud DB or Local State
+  const handleLoadSimulationData = async () => {
+    const confirmLoad = window.confirm(
+      '⚡ 시뮬레이션 가상 데이터를 불러오시겠습니까?\n\n테스트 및 시연용 후보자(9명)와 패널 배정 및 3인 평가 결과 가상 데이터셋이 데이터베이스에 복원됩니다.'
+    );
+    if (!confirmLoad) return;
 
-      for (const item of initialCandidates) {
-        await setDoc(doc(db, 'candidates', item.id), item);
+    if (isFirebaseConfigured && db) {
+      try {
+        console.log('Seeding simulation data to Cloud Firestore...');
+        for (const item of initialCandidates) {
+          await setDoc(doc(db, 'candidates', item.id), item);
+        }
+        for (const item of initialSubmissions) {
+          await setDoc(doc(db, 'submissions', item.id), item);
+        }
+        for (const item of initialCommittees) {
+          await setDoc(doc(db, 'committees', item.id), item);
+        }
+        for (const item of mockSecurityChecks) {
+          await setDoc(doc(db, 'securityChecks', item.id), item);
+        }
+        for (const item of mockScores) {
+          await setDoc(doc(db, 'scores', item.id), item);
+        }
+        for (const item of mockEvaluationResults) {
+          await setDoc(doc(db, 'evaluationResults', item.candidateId), item);
+        }
+        console.log('Simulation data successfully loaded into Cloud Firestore.');
+      } catch (error) {
+        console.error('Error loading simulation data to Cloud Firestore:', error);
+        alert('Cloud DB 가상 데이터 불러오기 중 오류가 발생했습니다: ' + (error as Error).message);
       }
-      for (const item of initialSubmissions) {
-        await setDoc(doc(db, 'submissions', item.id), item);
-      }
-      for (const item of initialCommittees) {
-        await setDoc(doc(db, 'committees', item.id), item);
-      }
-      for (const item of mockSecurityChecks) {
-        await setDoc(doc(db, 'securityChecks', item.id), item);
-      }
-      for (const item of mockScores) {
-        await setDoc(doc(db, 'scores', item.id), item);
-      }
-      for (const item of mockEvaluationResults) {
-        await setDoc(doc(db, 'evaluationResults', item.candidateId), item);
-      }
-
-      console.log('Database migration seeding successfully completed.');
-    } catch (error) {
-      console.error('Error migrating/seeding data to Cloud Firestore:', error);
     }
+
+    setCandidatesList(initialCandidates);
+    setSubmissionsList(initialSubmissions);
+    setCommitteesList(initialCommittees);
+    setSecurityChecks(mockSecurityChecks);
+    setScoresList(mockScores);
+    setEvaluationResults(mockEvaluationResults);
+
+    alert('시뮬레이션 가상 데이터(후보자 9명 및 3인 패널 평가 결과)를 성공적으로 불러왔습니다.');
+  };
+
+  // Reset / Clear all evaluation data from Firebase Cloud DB or Local State
+  const handleResetData = async () => {
+    const confirmReset = window.confirm(
+      '⚠️ 전체 평가 데이터를 초기화하시겠습니까?\n\n모든 후보자, 제출 과제, 배정 위원회 및 평가 결과가 초기화되며, 실제 신규 평가과제를 등록하여 실무 운영을 시작할 수 있는 깨끗한 상태가 됩니다.'
+    );
+    if (!confirmReset) return;
+
+    if (isFirebaseConfigured && db) {
+      try {
+        console.log('Resetting Cloud Firestore collections...');
+        const collectionsToReset = ['candidates', 'submissions', 'committees', 'securityChecks', 'scores', 'evaluationResults'];
+        for (const colName of collectionsToReset) {
+          const querySnapshot = await getDocs(collection(db, colName));
+          const deletePromises = querySnapshot.docs.map(docSnapshot => deleteDoc(doc(db, colName, docSnapshot.id)));
+          await Promise.all(deletePromises);
+        }
+        console.log('Cloud Firestore collections successfully reset.');
+      } catch (error) {
+        console.error('Error resetting Cloud Firestore:', error);
+        alert('Cloud DB 데이터 초기화 중 오류가 발생했습니다: ' + (error as Error).message);
+      }
+    }
+
+    setCandidatesList([]);
+    setSubmissionsList([]);
+    setCommitteesList([]);
+    setSecurityChecks([]);
+    setScoresList([]);
+    setEvaluationResults([]);
+
+    alert('모든 평가 데이터가 성공적으로 초기화되었습니다.\n우측 상단의 "+ 신규 평가과제 등록 & 패널 배정" 버튼을 눌러 실무 운영을 시작하세요.');
   };
 
   // Admin Add Candidate Form State
@@ -855,20 +889,68 @@ export default function App() {
             {/* ==================== ADMIN VIEW ==================== */}
             {view === 'admin' && (
               <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
               <div>
                 <h2>AICA 자격심사 관리 & 대기 큐</h2>
                 <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>6개 관계사 통합 AI 역량 자격 검증 현황을 관리합니다.</p>
               </div>
-              <button 
-                className="btn-primary" 
-                onClick={() => {
-                  setShowAddForm(true);
-                  handleAutoAssignPanel('A');
-                }}
-              >
-                + 신규 평가과제 등록 & 패널 배정
-              </button>
+              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                <button 
+                  className="btn-secondary" 
+                  onClick={handleLoadSimulationData}
+                  style={{ 
+                    display: 'inline-flex', 
+                    alignItems: 'center', 
+                    gap: '0.4rem', 
+                    background: 'rgba(99, 102, 241, 0.15)', 
+                    border: '1px solid rgba(99, 102, 241, 0.4)', 
+                    color: '#a5b4fc', 
+                    padding: '0.5rem 0.85rem', 
+                    fontSize: '0.85rem', 
+                    borderRadius: '6px', 
+                    cursor: 'pointer', 
+                    fontWeight: 600,
+                    transition: 'all 0.2s ease'
+                  }}
+                  title="가상의 시뮬레이션 데이터셋(후보자 9명 및 3인 패널 평가 결과)을 불러옵니다."
+                >
+                  <Database size={15} color="#a5b4fc" />
+                  <span>시뮬레이션 데이터 불러오기</span>
+                </button>
+
+                <button 
+                  className="btn-secondary" 
+                  onClick={handleResetData}
+                  style={{ 
+                    display: 'inline-flex', 
+                    alignItems: 'center', 
+                    gap: '0.4rem', 
+                    background: 'rgba(239, 68, 68, 0.12)', 
+                    border: '1px solid rgba(239, 68, 68, 0.35)', 
+                    color: '#fca5a5', 
+                    padding: '0.5rem 0.85rem', 
+                    fontSize: '0.85rem', 
+                    borderRadius: '6px', 
+                    cursor: 'pointer', 
+                    fontWeight: 600,
+                    transition: 'all 0.2s ease'
+                  }}
+                  title="모든 평가 과제 및 결과를 초기화하여 신규 실무 운영 상태로 만듭니다."
+                >
+                  <RotateCcw size={15} color="#fca5a5" />
+                  <span>데이터 초기화</span>
+                </button>
+
+                <button 
+                  className="btn-primary" 
+                  onClick={() => {
+                    setShowAddForm(true);
+                    handleAutoAssignPanel('A');
+                  }}
+                >
+                  + 신규 평가과제 등록 & 패널 배정
+                </button>
+              </div>
             </div>
 
             {/* Stats Dashboard Cards */}
@@ -1004,11 +1086,41 @@ export default function App() {
                   </tr>
                 </thead>
                 <tbody>
-                  {candidatesList
-                    .filter(c => adminAffiliateFilter === 'all' || c.affiliate === adminAffiliateFilter)
-                    .filter(c => adminLevelFilter === 'all' || c.level === parseInt(adminLevelFilter))
-                    .filter(c => adminStatusFilter === 'all' || c.status === adminStatusFilter)
-                    .map(cand => {
+                  {candidatesList.length === 0 ? (
+                    <tr>
+                      <td colSpan={9} style={{ textAlign: 'center', padding: '3.5rem 1rem', color: 'var(--text-muted)' }}>
+                        <Database size={36} color="var(--accent-primary)" style={{ marginBottom: '0.75rem', opacity: 0.6 }} />
+                        <h4 style={{ fontSize: '1.05rem', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '0.35rem' }}>등록된 자격심사 과제가 없습니다 (초기화 상태)</h4>
+                        <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', maxWidth: '560px', margin: '0 auto 1.25rem', lineHeight: '1.5' }}>
+                          현재 실무 운영을 위한 깨끗한 초기 상태입니다. 우측 상단의 <strong>'+ 신규 평가과제 등록 & 패널 배정'</strong> 버튼을 클릭해 새 심사건을 추가하거나, <strong>'시뮬레이션 데이터 불러오기'</strong> 버튼을 눌러 가상 시연 데이터를 불러올 수 있습니다.
+                        </p>
+                        <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center' }}>
+                          <button 
+                            className="btn-secondary" 
+                            style={{ fontSize: '0.8rem', padding: '0.4rem 0.85rem', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}
+                            onClick={handleLoadSimulationData}
+                          >
+                            <Database size={14} /> 시뮬레이션 데이터 불러오기
+                          </button>
+                          <button 
+                            className="btn-primary" 
+                            style={{ fontSize: '0.8rem', padding: '0.4rem 0.85rem' }}
+                            onClick={() => {
+                              setShowAddForm(true);
+                              handleAutoAssignPanel('A');
+                            }}
+                          >
+                            + 신규 평가과제 등록 & 패널 배정
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ) : (
+                    candidatesList
+                      .filter(c => adminAffiliateFilter === 'all' || c.affiliate === adminAffiliateFilter)
+                      .filter(c => adminLevelFilter === 'all' || c.level === parseInt(adminLevelFilter))
+                      .filter(c => adminStatusFilter === 'all' || c.status === adminStatusFilter)
+                      .map(cand => {
                       const comm = committeesList.find(co => co.candidateId === cand.id);
                       const res = evaluationResults.find(er => er.candidateId === cand.id);
                       
@@ -1072,7 +1184,8 @@ export default function App() {
                           </td>
                         </tr>
                       );
-                    })}
+                    })
+                  )}
                 </tbody>
               </table>
             </div>
@@ -1481,12 +1594,26 @@ export default function App() {
                   </tr>
                 </thead>
                 <tbody>
-                  {candidatesList
-                    .filter(c => {
-                      const comm = committeesList.find(co => co.candidateId === c.id);
-                      return comm?.reviewer1Id === currentUser.id || comm?.reviewer2Id === currentUser.id || comm?.reviewer3Id === currentUser.id;
-                    })
-                    .map(cand => {
+                  {candidatesList.filter(c => {
+                    const comm = committeesList.find(co => co.candidateId === c.id);
+                    return comm?.reviewer1Id === currentUser.id || comm?.reviewer2Id === currentUser.id || comm?.reviewer3Id === currentUser.id;
+                  }).length === 0 ? (
+                    <tr>
+                      <td colSpan={8} style={{ textAlign: 'center', padding: '3.5rem 1rem', color: 'var(--text-muted)' }}>
+                        <Database size={36} color="var(--accent-primary)" style={{ marginBottom: '0.75rem', opacity: 0.6 }} />
+                        <h4 style={{ fontSize: '1.05rem', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '0.35rem' }}>배정된 자격심사 과제가 없습니다</h4>
+                        <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', maxWidth: '500px', margin: '0 auto' }}>
+                          운영간사가 신규 평가과제를 등록하고 패널을 배정하면 해당 심사건이 여기에 자동으로 정렬됩니다.
+                        </p>
+                      </td>
+                    </tr>
+                  ) : (
+                    candidatesList
+                      .filter(c => {
+                        const comm = committeesList.find(co => co.candidateId === c.id);
+                        return comm?.reviewer1Id === currentUser.id || comm?.reviewer2Id === currentUser.id || comm?.reviewer3Id === currentUser.id;
+                      })
+                      .map(cand => {
                       const comm = committeesList.find(co => co.candidateId === cand.id);
                       const sub = submissionsList.find(s => s.candidateId === cand.id);
                       
@@ -1534,7 +1661,8 @@ export default function App() {
                           </td>
                         </tr>
                       );
-                    })}
+                    })
+                  )}
                 </tbody>
               </table>
             </div>
