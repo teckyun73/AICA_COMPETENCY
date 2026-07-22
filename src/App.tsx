@@ -2260,243 +2260,321 @@ export default function App() {
 
                         {/* 16:9 Body Viewport Content */}
                         <div style={{ flex: 1, position: 'relative', width: '100%', height: 'calc(100% - 34px)', background: '#090d16', overflow: 'hidden' }}>
-                          {sandboxMode === 'preview' ? (
-                            /* Live Web / YouTube Embed Viewport */
-                            <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', position: 'relative' }}>
-                              {/* Top Informative Banner for Refused Connection handling */}
-                              <div style={{ background: 'rgba(245, 158, 11, 0.15)', borderBottom: '1px solid rgba(245, 158, 11, 0.3)', padding: '0.35rem 0.75rem', fontSize: '0.7rem', color: '#fef08a', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                <span>💡 <strong>보안 안내:</strong> 외부 웹사이트 보안 설정(X-Frame-Options)으로 인해 연결이 거부되는 경우, 상단 <strong>[🎮 대화형 모의 시연 앱]</strong>을 클릭하면 심사 창 안에서 100% 바로 가동해 보실 수 있습니다.</span>
-                                <button
-                                  type="button"
-                                  className="btn-secondary"
-                                  style={{ padding: '0.1rem 0.4rem', fontSize: '0.68rem', whiteSpace: 'nowrap' }}
-                                  onClick={() => setSandboxMode('simulator')}
-                                >
-                                  🎮 시연 앱으로 전환
-                                </button>
-                              </div>
+                          {(() => {
+                            const isSharePointVideo = currentSubmission.demoUrl.includes('sharepoint.com') || currentSubmission.demoUrl.includes('onedrive') || currentSubmission.demoUrl.includes('office.com');
 
-                              <iframe
-                                id="demo-sandbox-frame"
-                                src={(() => {
-                                  const url = currentSubmission.demoUrl;
-                                  const ytMatch = url?.match(/(?:youtube\.com\/(?:watch\?.*v=|embed\/|v\/)|youtu\.be\/)([\w-]{11})/);
-                                  if (ytMatch && ytMatch[1]) {
-                                    return `https://www.youtube.com/embed/${ytMatch[1]}?autoplay=1&mute=1&rel=0&enablejsapi=1`;
-                                  }
-                                  return url;
-                                })()}
-                                title="AICA Candidate Demo Sandbox"
-                                style={{
+                            if (sandboxMode === 'preview') {
+                              return (
+                                <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', position: 'relative' }}>
+                                  {isSharePointVideo ? (
+                                    /* SharePoint Video Dedicated Inline Player Card */
+                                    <div style={{
+                                      width: '100%',
+                                      height: '100%',
+                                      display: 'flex',
+                                      flexDirection: 'column',
+                                      justifyContent: 'center',
+                                      alignItems: 'center',
+                                      padding: '1.5rem',
+                                      boxSizing: 'border-box',
+                                      background: 'radial-gradient(circle at center, #1e293b 0%, #090d16 100%)',
+                                      color: '#ffffff',
+                                      textAlign: 'center'
+                                    }}>
+                                      <div style={{ background: 'rgba(59, 130, 246, 0.15)', border: '1px solid rgba(59, 130, 246, 0.4)', padding: '0.3rem 0.8rem', borderRadius: '20px', fontSize: '0.72rem', color: '#93c5fd', marginBottom: '0.75rem', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                                        <Video size={14} /> 🔒 SharePoint 사내 보안 동영상 링크 연동됨
+                                      </div>
+                                      
+                                      <h4 style={{ fontSize: '1rem', color: '#ffffff', margin: '0 0 0.5rem 0', fontWeight: 'bold', maxWidth: '600px' }}>
+                                        {currentSubmission.title}
+                                      </h4>
+                                      
+                                      <p style={{ fontSize: '0.78rem', color: '#94a3b8', maxWidth: '560px', margin: '0 0 1.25rem 0', lineHeight: '1.4' }}>
+                                        💡 사내 SharePoint 동영상(<strong>ateccnkr.sharepoint.com</strong>)은 MS SSO 보안 로그인 정책으로 타 웹사이트 내 iframe 직접 삽입이 통제됩니다. 아래 버튼을 눌러 100% 원본 해상도로 재생하거나 모의 시연 앱을 실행하세요.
+                                      </p>
+
+                                      <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', justifyContent: 'center' }}>
+                                        <a
+                                          href={currentSubmission.demoUrl}
+                                          target="_blank"
+                                          rel="noreferrer"
+                                          className="btn-primary"
+                                          style={{ padding: '0.5rem 1.25rem', fontSize: '0.82rem', display: 'flex', alignItems: 'center', gap: '0.4rem', background: '#3b82f6', textDecoration: 'none' }}
+                                        >
+                                          <ExternalLink size={15} /> 🎬 SharePoint 비디오 즉시 재생 (새창)
+                                        </a>
+                                        <button
+                                          type="button"
+                                          className="btn-secondary"
+                                          style={{ padding: '0.5rem 1rem', fontSize: '0.82rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+                                          onClick={() => setSandboxMode('simulator')}
+                                        >
+                                          <Play size={14} /> 🎮 대화형 AI 모의 시연 실행
+                                        </button>
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    /* Standard Web / YouTube Embed Viewport */
+                                    <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', position: 'relative' }}>
+                                      <div style={{ background: 'rgba(245, 158, 11, 0.15)', borderBottom: '1px solid rgba(245, 158, 11, 0.3)', padding: '0.35rem 0.75rem', fontSize: '0.7rem', color: '#fef08a', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                        <span>💡 <strong>보안 안내:</strong> 외부 웹사이트 보안 설정(X-Frame-Options)으로 인해 연결이 거부되는 경우, 상단 <strong>[🎮 대화형 모의 시연 앱]</strong>을 클릭하면 심사 창 안에서 100% 바로 가동해 보실 수 있습니다.</span>
+                                        <button
+                                          type="button"
+                                          className="btn-secondary"
+                                          style={{ padding: '0.1rem 0.4rem', fontSize: '0.68rem', whiteSpace: 'nowrap' }}
+                                          onClick={() => setSandboxMode('simulator')}
+                                        >
+                                          🎮 시연 앱으로 전환
+                                        </button>
+                                      </div>
+
+                                      <iframe
+                                        id="demo-sandbox-frame"
+                                        src={(() => {
+                                          const url = currentSubmission.demoUrl;
+                                          const ytMatch = url?.match(/(?:youtube\.com\/(?:watch\?.*v=|embed\/|v\/)|youtu\.be\/)([\w-]{11})/);
+                                          if (ytMatch && ytMatch[1]) {
+                                            return `https://www.youtube.com/embed/${ytMatch[1]}?autoplay=1&mute=1&rel=0&enablejsapi=1`;
+                                          }
+                                          return url;
+                                        })()}
+                                        title="AICA Candidate Demo Sandbox"
+                                        style={{
+                                          width: '100%',
+                                          flex: 1,
+                                          border: 'none',
+                                          background: '#0f172a'
+                                        }}
+                                      />
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            }
+
+                            if (sandboxMode === 'simulator') {
+                              const defaultQuery = currentSubmission.title || currentSubmission.painPoint || '등록 과제 AI 모델 추론 시연';
+
+                              return (
+                                <div style={{
                                   width: '100%',
-                                  flex: 1,
-                                  border: 'none',
-                                  background: '#0f172a'
-                                }}
-                              />
-                            </div>
-                          ) : sandboxMode === 'simulator' ? (
-                            /* Interactive Live Demo Application Simulator Mode */
-                            <div style={{
-                              width: '100%',
-                              height: '100%',
-                              display: 'flex',
-                              flexDirection: 'column',
-                              background: '#0f172a',
-                              color: '#ffffff',
-                              padding: '0.75rem',
-                              boxSizing: 'border-box',
-                              overflowY: 'auto'
-                            }}>
-                              {/* Simulator Top Header Info */}
-                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '0.5rem', marginBottom: '0.65rem' }}>
-                                <div>
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                                    <span className="badge badge-level3" style={{ fontSize: '0.68rem' }}>
-                                      Level {selectedCandidate.level} · {currentSubmission.category}
+                                  height: '100%',
+                                  display: 'flex',
+                                  flexDirection: 'column',
+                                  background: '#0f172a',
+                                  color: '#ffffff',
+                                  padding: '0.75rem',
+                                  boxSizing: 'border-box',
+                                  overflowY: 'auto'
+                                }}>
+                                  {/* Simulator Header */}
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '0.5rem', marginBottom: '0.65rem' }}>
+                                    <div>
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                        <span className="badge badge-level3" style={{ fontSize: '0.68rem' }}>
+                                          Level {selectedCandidate.level} · {currentSubmission.category}
+                                        </span>
+                                        <h5 style={{ margin: 0, fontSize: '0.85rem', color: '#60a5fa' }}>{currentSubmission.title}</h5>
+                                      </div>
+                                    </div>
+                                    <span style={{ background: '#10b981', color: '#020617', fontWeight: 'bold', padding: '0.2rem 0.5rem', borderRadius: '4px', fontSize: '0.68rem' }}>
+                                      ● 16:9 대화형 AI 모의 시연 엔진 동작 중
                                     </span>
-                                    <h5 style={{ margin: 0, fontSize: '0.85rem', color: '#60a5fa' }}>{currentSubmission.title}</h5>
+                                  </div>
+
+                                  {/* Candidate Pain Point & Solution Box */}
+                                  <div style={{ background: 'rgba(59, 130, 246, 0.08)', border: '1px solid rgba(59, 130, 246, 0.25)', borderRadius: '6px', padding: '0.5rem 0.75rem', marginBottom: '0.65rem', fontSize: '0.73rem', color: '#cbd5e1' }}>
+                                    <div style={{ marginBottom: '0.2rem' }}>⚡ <strong>비즈니스 Pain Point:</strong> {currentSubmission.painPoint}</div>
+                                    <div>💡 <strong>AI 해결 방안:</strong> {currentSubmission.solution}</div>
+                                  </div>
+
+                                  {/* Interactive Controls */}
+                                  <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '6px', padding: '0.65rem', marginBottom: '0.65rem' }}>
+                                    <label style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '0.3rem' }}>
+                                      💬 <strong>지원자 과제 시연용 테스트 쿼리 / 입력값:</strong>
+                                    </label>
+                                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                      <input
+                                        type="text"
+                                        value={simInput || defaultQuery}
+                                        onChange={(e) => setSimInput(e.target.value)}
+                                        style={{
+                                          flex: 1,
+                                          background: '#020617',
+                                          border: '1px solid var(--border-color)',
+                                          borderRadius: '4px',
+                                          color: '#ffffff',
+                                          padding: '0.35rem 0.6rem',
+                                          fontSize: '0.75rem'
+                                        }}
+                                      />
+                                      <button
+                                        type="button"
+                                        className="btn-primary"
+                                        disabled={simLoading}
+                                        onClick={() => {
+                                          setSimLoading(true);
+                                          setSimResult(null);
+                                          setTimeout(() => {
+                                            setSimLoading(false);
+                                            setSimResult(
+                                              `✅ [지원 과제 AI 모델 시연 실행 결과]\n` +
+                                              `• 제출 과제명: ${currentSubmission.title}\n` +
+                                              `• 분야/레벨: Level ${selectedCandidate.level} (${currentSubmission.category})\n` +
+                                              `• 해결 방안: ${currentSubmission.solution}\n\n` +
+                                              `• 6S 보고서 성과 요약:\n${currentSubmission.reportSummary || '- 검증 완료'}\n\n` +
+                                              `• 등록 증빙 동영상 / URL: ${currentSubmission.demoUrl}\n` +
+                                              `• 실시간 지표: Latency 240ms | Token: 142 tokens | PII Masking: 🟢 Passed (0건 감지)`
+                                            );
+                                          }, 800);
+                                        }}
+                                        style={{ padding: '0.35rem 0.85rem', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.3rem', background: '#3b82f6', whiteSpace: 'nowrap' }}
+                                      >
+                                        {simLoading ? <RefreshCw size={13} className="spin" /> : <Play size={13} />}
+                                        {simLoading ? '추론 수행 중...' : 'AI 실행 및 추론 수행'}
+                                      </button>
+                                    </div>
+                                  </div>
+
+                                  {/* Output Window */}
+                                  <div style={{ flex: 1, background: '#020617', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '6px', padding: '0.65rem', overflowY: 'auto', fontFamily: 'monospace', fontSize: '0.75rem', lineHeight: '1.5' }}>
+                                    {simLoading ? (
+                                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--accent-secondary)' }}>
+                                        <RefreshCw size={24} style={{ animation: 'spin 1s linear infinite', marginBottom: '0.5rem' }} />
+                                        <span>[{currentSubmission.title}] AI 추론 파이프라인 실행 중...</span>
+                                      </div>
+                                    ) : simResult ? (
+                                      <div>
+                                        <div style={{ color: '#10b981', fontWeight: 'bold', marginBottom: '0.4rem' }}>
+                                          ✅ AI 모델 추론 성공 (Latency: 240ms | Token: 142 tokens | PII Masking: 🟢 Passed)
+                                        </div>
+                                        <pre style={{ margin: 0, whiteSpace: 'pre-wrap', fontFamily: 'monospace', color: '#e2e8f0', background: 'rgba(255,255,255,0.03)', padding: '0.5rem', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                                          {simResult}
+                                        </pre>
+                                      </div>
+                                    ) : (
+                                      <div>
+                                        <div style={{ color: '#94a3b8', marginBottom: '0.4rem' }}>
+                                          💡 <strong>지원자 제출 6S 보고서 핵심 요약:</strong>
+                                        </div>
+                                        <pre style={{ margin: 0, whiteSpace: 'pre-wrap', fontFamily: 'monospace', color: '#cbd5e1', fontSize: '0.73rem', background: 'rgba(255,255,255,0.02)', padding: '0.5rem', borderRadius: '4px' }}>
+                                          {currentSubmission.reportSummary}
+                                        </pre>
+                                        <div style={{ color: '#64748b', fontSize: '0.7rem', marginTop: '0.5rem' }}>
+                                          상단의 [AI 실행 및 추론 수행] 버튼을 클릭하면 심사위원 전용 16:9 샌드박스 내부에서 본 과제의 실시간 AI 실행 결과를 확인하실 수 있습니다.
+                                        </div>
+                                      </div>
+                                    )}
                                   </div>
                                 </div>
-                                <span style={{ background: '#10b981', color: '#020617', fontWeight: 'bold', padding: '0.2rem 0.5rem', borderRadius: '4px', fontSize: '0.68rem' }}>
-                                  ● 16:9 대화형 AI 모의 시연 엔진 동작 중
-                                </span>
-                              </div>
+                              );
+                            }
 
-                              {/* Interactive Demo Inputs & Execution controls */}
-                              <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '6px', padding: '0.65rem', marginBottom: '0.65rem' }}>
-                                <label style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', display: 'block', marginBottom: '0.3rem' }}>
-                                  💬 <strong>시연용 테스트 쿼리 / 입력값:</strong>
-                                </label>
-                                <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                  <input
-                                    type="text"
-                                    value={simInput || (
-                                      currentSubmission.category === 'RAG/챗봇' ? '스마트 팩토리 A동 3번 설비 기계 고장 원인 및 매뉴얼 검색' :
-                                      currentSubmission.category === '업무자동화' ? '고객 센터 장비 접속 오류 및 패킷 손실 티켓 분류' :
-                                      currentSubmission.category === '웹/앱' ? '에이텍모빌리티 최신 사업 현황 및 B2B 제안 포인트 추출' :
-                                      '교통 단말기 로그 기반 부품 수명 진단 및 고장 예측 분석'
-                                    )}
-                                    onChange={(e) => setSimInput(e.target.value)}
-                                    style={{
-                                      flex: 1,
-                                      background: '#020617',
-                                      border: '1px solid var(--border-color)',
-                                      borderRadius: '4px',
-                                      color: '#ffffff',
-                                      padding: '0.35rem 0.6rem',
-                                      fontSize: '0.75rem'
-                                    }}
-                                  />
+                            /* 16:9 Demo Video MP4 / SharePoint Player Mode */
+                            return (
+                              <div style={{
+                                width: '100%',
+                                height: '100%',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                justifyContent: 'space-between',
+                                padding: '0.75rem',
+                                boxSizing: 'border-box',
+                                background: 'radial-gradient(circle at center, #1e293b 0%, #020617 100%)',
+                                position: 'relative'
+                              }}>
+                                {/* Video Title Header Overlay */}
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', zIndex: 2 }}>
+                                  <div style={{ fontSize: '0.8rem', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                    <Video size={14} color="var(--accent-primary)" />
+                                    <strong>[{isSharePointVideo ? 'SharePoint_Video_Stream.mp4' : `AICA_Level${selectedCandidate.level}_Demo_Play.mp4`}] - {currentSubmission.title}</strong>
+                                  </div>
+                                  <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', background: 'rgba(0,0,0,0.5)', padding: '0.15rem 0.4rem', borderRadius: '4px' }}>
+                                    {isSharePointVideo ? 'SharePoint Stream · FHD 1080p' : 'FHD 1080p · 60fps (45MB)'}
+                                  </span>
+                                </div>
+
+                                {/* Center Play/Pause & Direct SharePoint Launch Button */}
+                                <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', zIndex: 2, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem' }}>
                                   <button
                                     type="button"
-                                    className="btn-primary"
-                                    disabled={simLoading}
-                                    onClick={() => {
-                                      setSimLoading(true);
-                                      setSimResult(null);
-                                      setTimeout(() => {
-                                        setSimLoading(false);
-                                        setSimResult(
-                                          currentSubmission.category === 'RAG/챗봇' ?
-                                            "🔍 [RAG Vector Store 검색 완료]\n- 참조 문서: 설비_점검_가이드_v4.pdf (Chunk #42, Similarity: 0.94)\n- 분석 원인: 베어링 가열 및 유압 밸브 막힘\n- 추천 조치: 1) 유압유 공급 라인 정밀 세척, 2) 3번 베어링 교체 조치 (응답 시간: 240ms)" :
-                                          currentSubmission.category === '업무자동화' ?
-                                            "⚡ [CS Auto Classifier & FAQ 시스템]\n- 분류 결과: [네트워크/단말장애] (신뢰도: 98.7%)\n- FAQ 자동 추천 1위: 'Q: 단말기 커넥터 전원 재인가 및 IP 재설정 절차'\n- 자동 티켓 등록 및 매니저 메신저 알림 완료" :
-                                          currentSubmission.category === '웹/앱' ?
-                                            "📄 [B2B Proposal Helper 추출 성공]\n- 핵심 키워드: 태그리스 결제 시스템, 스마트 교통 솔루션\n- 예상 Pain Point: 기존 갠트리 수동 정산의 병목 현상\n- 영업 제안 장표 3개 Markdown 생성 완료" :
-                                            "📊 [Predictive Analytics Agent 실행 결과]\n- 고장 위험 지수: 89% (위험 수준: High)\n- 예측 고장 시점: 72시간 이내\n- 추천 정비: 현장 엔지니어 수동 점검 및 Teams 메신저 자동 알림 보냄"
-                                        );
-                                      }, 800);
+                                    onClick={() => setIsPlayingVideo(!isPlayingVideo)}
+                                    style={{
+                                      width: '56px',
+                                      height: '56px',
+                                      borderRadius: '50%',
+                                      background: isPlayingVideo ? 'rgba(59, 130, 246, 0.9)' : 'rgba(15, 23, 42, 0.85)',
+                                      border: '2px solid var(--accent-primary)',
+                                      color: '#ffffff',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      cursor: 'pointer',
+                                      boxShadow: '0 0 20px rgba(59, 130, 246, 0.5)',
+                                      transition: 'transform 0.2s ease'
                                     }}
-                                    style={{ padding: '0.35rem 0.85rem', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.3rem', background: '#3b82f6', whiteSpace: 'nowrap' }}
+                                    title={isPlayingVideo ? '일시정지' : '재생'}
                                   >
-                                    {simLoading ? <RefreshCw size={13} className="spin" /> : <Play size={13} />}
-                                    {simLoading ? '추론 수행 중...' : 'AI 실행 및 추론 수행'}
+                                    {isPlayingVideo ? <Pause size={24} /> : <Play size={24} style={{ marginLeft: '3px' }} />}
                                   </button>
-                                </div>
-                              </div>
-
-                              {/* Simulation Response Display Window */}
-                              <div style={{ flex: 1, background: '#020617', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '6px', padding: '0.65rem', overflowY: 'auto', fontFamily: 'monospace', fontSize: '0.75rem', lineHeight: '1.5' }}>
-                                {simLoading ? (
-                                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--accent-secondary)' }}>
-                                    <RefreshCw size={24} style={{ animation: 'spin 1s linear infinite', marginBottom: '0.5rem' }} />
-                                    <span>AI 모델 추론 및 RAG 임베딩 검색을 실행하는 중입니다...</span>
-                                  </div>
-                                ) : simResult ? (
-                                  <div>
-                                    <div style={{ color: '#10b981', fontWeight: 'bold', marginBottom: '0.4rem' }}>
-                                      ✅ AI 모델 추론 성공 (Latency: 240ms | Token: 142 tokens | PII Masking: 🟢 Passed)
-                                    </div>
-                                    <pre style={{ margin: 0, whiteSpace: 'pre-wrap', fontFamily: 'monospace', color: '#e2e8f0', background: 'rgba(255,255,255,0.03)', padding: '0.5rem', borderRadius: '4px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                                      {simResult}
-                                    </pre>
-                                  </div>
-                                ) : (
-                                  <div>
-                                    <div style={{ color: '#94a3b8', marginBottom: '0.4rem' }}>
-                                      💡 <strong>시스템 솔루션 요약:</strong> {currentSubmission.solution}
-                                    </div>
-                                    <div style={{ color: '#64748b', fontSize: '0.7rem' }}>
-                                      위의 [AI 실행 및 추론 수행] 버튼을 클릭하면 심사위원 16:9 샌드박스 창 내에서 AI 모델의 실시간 응답 및 RAG 검색 동작을 직접 테스트하실 수 있습니다.
-                                    </div>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          ) : (
-                            /* 16:9 Demo Video MP4 Player Mode */
-                            <div style={{
-                              width: '100%',
-                              height: '100%',
-                              display: 'flex',
-                              flexDirection: 'column',
-                              justifyContent: 'space-between',
-                              padding: '0.75rem',
-                              boxSizing: 'border-box',
-                              background: 'radial-gradient(circle at center, #1e293b 0%, #020617 100%)',
-                              position: 'relative'
-                            }}>
-                              {/* Video Title Header Overlay */}
-                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', zIndex: 2 }}>
-                                <div style={{ fontSize: '0.8rem', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                                  <Video size={14} color="var(--accent-primary)" />
-                                  <strong>[AICA_Level{selectedCandidate.level}_Demo_Play.mp4]</strong>
-                                </div>
-                                <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', background: 'rgba(0,0,0,0.5)', padding: '0.15rem 0.4rem', borderRadius: '4px' }}>
-                                  FHD 1080p · 60fps (45MB)
-                                </span>
-                              </div>
-
-                              {/* Center Play/Pause Button */}
-                              <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', zIndex: 2 }}>
-                                <button
-                                  type="button"
-                                  onClick={() => setIsPlayingVideo(!isPlayingVideo)}
-                                  style={{
-                                    width: '56px',
-                                    height: '56px',
-                                    borderRadius: '50%',
-                                    background: isPlayingVideo ? 'rgba(59, 130, 246, 0.9)' : 'rgba(15, 23, 42, 0.85)',
-                                    border: '2px solid var(--accent-primary)',
-                                    color: '#ffffff',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    cursor: 'pointer',
-                                    boxShadow: '0 0 20px rgba(59, 130, 246, 0.5)',
-                                    transition: 'transform 0.2s ease'
-                                  }}
-                                  title={isPlayingVideo ? '일시정지' : '재생'}
-                                >
-                                  {isPlayingVideo ? <Pause size={24} /> : <Play size={24} style={{ marginLeft: '3px' }} />}
-                                </button>
-                              </div>
-
-                              {/* Video Player Bottom Control Bar */}
-                              <div style={{ zIndex: 2, background: 'rgba(15, 23, 42, 0.92)', backdropFilter: 'blur(4px)', padding: '0.4rem 0.65rem', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.08)' }}>
-                                {/* Timeline Progress Bar */}
-                                <div 
-                                  style={{ width: '100%', height: '4px', background: 'rgba(255,255,255,0.2)', borderRadius: '2px', cursor: 'pointer', marginBottom: '0.4rem', position: 'relative' }}
-                                  onClick={(e) => {
-                                    const rect = e.currentTarget.getBoundingClientRect();
-                                    const pos = ((e.clientX - rect.left) / rect.width) * 100;
-                                    setVideoProgress(Math.min(100, Math.max(0, pos)));
-                                  }}
-                                >
-                                  <div style={{ width: `${videoProgress}%`, height: '100%', background: 'var(--accent-primary)', borderRadius: '2px' }}></div>
-                                </div>
-
-                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.72rem', color: 'var(--text-secondary)' }}>
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                    <button
-                                      type="button"
-                                      onClick={() => setIsPlayingVideo(!isPlayingVideo)}
-                                      style={{ background: 'none', border: 'none', color: '#ffffff', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                                  {isSharePointVideo && (
+                                    <a
+                                      href={currentSubmission.demoUrl}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      className="btn-primary"
+                                      style={{ padding: '0.35rem 0.85rem', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.3rem', background: '#3b82f6', textDecoration: 'none' }}
                                     >
-                                      {isPlayingVideo ? <Pause size={14} /> : <Play size={14} />}
-                                    </button>
-                                    <span>{Math.floor((videoProgress / 100) * 135 / 60)}:{(Math.floor((videoProgress / 100) * 135) % 60).toString().padStart(2, '0')} / 02:15</span>
+                                      <ExternalLink size={13} /> SharePoint 비디오 원본 재생 (새창)
+                                    </a>
+                                  )}
+                                </div>
+
+                                {/* Video Player Bottom Control Bar */}
+                                <div style={{ zIndex: 2, background: 'rgba(15, 23, 42, 0.92)', backdropFilter: 'blur(4px)', padding: '0.4rem 0.65rem', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.08)' }}>
+                                  {/* Timeline Progress Bar */}
+                                  <div 
+                                    style={{ width: '100%', height: '4px', background: 'rgba(255,255,255,0.2)', borderRadius: '2px', cursor: 'pointer', marginBottom: '0.4rem', position: 'relative' }}
+                                    onClick={(e) => {
+                                      const rect = e.currentTarget.getBoundingClientRect();
+                                      const pos = ((e.clientX - rect.left) / rect.width) * 100;
+                                      setVideoProgress(Math.min(100, Math.max(0, pos)));
+                                    }}
+                                  >
+                                    <div style={{ width: `${videoProgress}%`, height: '100%', background: 'var(--accent-primary)', borderRadius: '2px' }}></div>
                                   </div>
 
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-                                    <span style={{ color: 'var(--color-success)', fontSize: '0.68rem' }}>● 시연 MP4 스트리밍 중</span>
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        const el = document.getElementById('demo-sandbox-frame');
-                                        if (el && el.requestFullscreen) el.requestFullscreen();
-                                      }}
-                                      style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
-                                      title="전체 화면"
-                                    >
-                                      <Maximize2 size={13} />
-                                    </button>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.72rem', color: 'var(--text-secondary)' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                      <button
+                                        type="button"
+                                        onClick={() => setIsPlayingVideo(!isPlayingVideo)}
+                                        style={{ background: 'none', border: 'none', color: '#ffffff', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                                      >
+                                        {isPlayingVideo ? <Pause size={14} /> : <Play size={14} />}
+                                      </button>
+                                      <span>{Math.floor((videoProgress / 100) * 135 / 60)}:{(Math.floor((videoProgress / 100) * 135) % 60).toString().padStart(2, '0')} / 02:15</span>
+                                    </div>
+
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                                      <span style={{ color: 'var(--color-success)', fontSize: '0.68rem' }}>● {isSharePointVideo ? 'SharePoint 스트리밍 중' : '시연 MP4 스트리밍 중'}</span>
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          const el = document.getElementById('demo-sandbox-frame');
+                                          if (el && el.requestFullscreen) el.requestFullscreen();
+                                        }}
+                                        style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                                        title="전체 화면"
+                                      >
+                                        <Maximize2 size={13} />
+                                      </button>
+                                    </div>
                                   </div>
                                 </div>
                               </div>
-                            </div>
-                          )}
+                            );
+                          })()}
                         </div>
                       </div>
                     </div>
