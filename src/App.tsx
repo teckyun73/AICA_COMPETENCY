@@ -24,7 +24,8 @@ import {
   Maximize2,
   RefreshCw,
   Monitor,
-  Edit
+  Edit,
+  Trash2
 } from 'lucide-react';
 import { 
   users as initialUsers, 
@@ -355,6 +356,58 @@ export default function App() {
     }
 
     setShowAddForm(true);
+  };
+
+  const handleDeleteTask = (cand: Candidate) => {
+    const sub = submissionsList.find(s => s.candidateId === cand.id);
+    const comm = committeesList.find(co => co.candidateId === cand.id);
+
+    const taskTitle = sub?.title || cand.name;
+    
+    if (!window.confirm(`[${cand.name}] 지원자의 자격심사 과제\n"${taskTitle}"\n항목을 정말 삭제하시겠습니까?\n\n※ 삭제 시 제출 과제, 배정 심사위원 패널 및 작성된 평가 점수가 모두 제거됩니다.`)) {
+      return;
+    }
+
+    // 1. Filter out local state arrays
+    setCandidatesList(prev => prev.filter(c => c.id !== cand.id));
+    setSubmissionsList(prev => prev.filter(s => s.candidateId !== cand.id));
+    setCommitteesList(prev => prev.filter(co => co.candidateId !== cand.id));
+    setEvaluationResults(prev => prev.filter(er => er.candidateId !== cand.id));
+    if (comm?.id) {
+      setScoresList(prev => prev.filter(sc => sc.committeeId !== comm.id));
+    }
+    if (sub?.id) {
+      setSecurityChecks(prev => prev.filter(sc => sc.submissionId !== sub.id));
+    }
+
+    if (selectedCandidate?.id === cand.id) {
+      setSelectedCandidate(null);
+    }
+
+    // 2. Delete from Firestore if configured
+    if (isFirebaseConfigured && db) {
+      try {
+        deleteDoc(doc(db, 'candidates', cand.id));
+        if (sub?.id) deleteDoc(doc(db, 'submissions', sub.id));
+        if (comm?.id) deleteDoc(doc(db, 'committees', comm.id));
+        deleteDoc(doc(db, 'evaluationResults', cand.id));
+        
+        if (comm?.id) {
+          scoresList.filter(sc => sc.committeeId === comm.id).forEach(sc => {
+            deleteDoc(doc(db, 'scores', sc.id));
+          });
+        }
+        if (sub?.id) {
+          securityChecks.filter(sc => sc.submissionId === sub.id).forEach(sc => {
+            deleteDoc(doc(db, 'securityChecks', sc.id));
+          });
+        }
+      } catch (e) {
+        console.error('Error deleting task from Firestore:', e);
+      }
+    }
+
+    alert(`[${cand.name}] 지원자의 자격심사 과제 항목이 성공적으로 삭제되었습니다.`);
   };
 
   // Detail Modal state for dashboard statistics
@@ -1403,6 +1456,24 @@ export default function App() {
                                 <Edit size={12} />
                                 수정
                               </button>
+                              <button 
+                                className="btn-secondary" 
+                                style={{ 
+                                  padding: '0.25rem 0.5rem', 
+                                  fontSize: '0.75rem', 
+                                  display: 'inline-flex', 
+                                  alignItems: 'center', 
+                                  gap: '0.25rem',
+                                  background: 'rgba(239, 68, 68, 0.15)',
+                                  border: '1px solid rgba(239, 68, 68, 0.35)',
+                                  color: '#fca5a5'
+                                }}
+                                onClick={() => handleDeleteTask(cand)}
+                                title="과제 및 심사 배정 항목 삭제"
+                              >
+                                <Trash2 size={12} color="#fca5a5" />
+                                삭제
+                              </button>
                               {cand.status === '완료' && (
                                 <button 
                                   className="btn-secondary" 
@@ -1520,18 +1591,38 @@ export default function App() {
                                 </td>
                                 <td><strong>{res ? `${res.averageScore} 점` : '-'}</strong></td>
                                 <td>
-                                  <button 
-                                    className="btn-secondary" 
-                                    style={{ padding: '0.2rem 0.45rem', fontSize: '0.72rem', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}
-                                    onClick={() => {
-                                      setStatsModalType(null);
-                                      handleOpenEditForm(cand);
-                                    }}
-                                    title="과제 정보 및 심사패널 배정 수정"
-                                  >
-                                    <Edit size={11} />
-                                    수정
-                                  </button>
+                                  <div style={{ display: 'flex', gap: '0.25rem', alignItems: 'center' }}>
+                                    <button 
+                                      className="btn-secondary" 
+                                      style={{ padding: '0.2rem 0.45rem', fontSize: '0.72rem', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}
+                                      onClick={() => {
+                                        setStatsModalType(null);
+                                        handleOpenEditForm(cand);
+                                      }}
+                                      title="과제 정보 및 심사패널 배정 수정"
+                                    >
+                                      <Edit size={11} />
+                                      수정
+                                    </button>
+                                    <button 
+                                      className="btn-secondary" 
+                                      style={{ 
+                                        padding: '0.2rem 0.45rem', 
+                                        fontSize: '0.72rem', 
+                                        display: 'inline-flex', 
+                                        alignItems: 'center', 
+                                        gap: '0.25rem',
+                                        background: 'rgba(239, 68, 68, 0.15)',
+                                        border: '1px solid rgba(239, 68, 68, 0.35)',
+                                        color: '#fca5a5'
+                                      }}
+                                      onClick={() => handleDeleteTask(cand)}
+                                      title="과제 및 심사 배정 항목 삭제"
+                                    >
+                                      <Trash2 size={11} color="#fca5a5" />
+                                      삭제
+                                    </button>
+                                  </div>
                                 </td>
                               </tr>
                             );
