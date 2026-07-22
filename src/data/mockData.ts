@@ -169,7 +169,7 @@ const rawEncryptedUsers: User[] = [
   {
     id: "rev4",
     name: ":Mln:M57:]p\\",
-    email: "dZ8rg5IxQWYDepI5][Lx\\5<w",
+    email: "dZ8rg5IxTJI3]ZPxd6L@",
     role: "reviewer",
     affiliate: "A",
     dept: "연구소",
