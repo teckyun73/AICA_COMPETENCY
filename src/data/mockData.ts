@@ -17,6 +17,7 @@ export interface Candidate {
   dept: string;
   level: 3 | 4;
   status: '대기' | '평가중' | '완료' | '재심사';
+  evalDate?: string;
 }
 
 export interface Submission {
@@ -249,17 +250,17 @@ export const users: User[] = rawEncryptedUsers.map(u => ({
 
 export const candidates: Candidate[] = [
   // Level 3 Candidates
-  { id: 'cand1', name: '김민지', email: 'mj.kim@atec.kr', affiliate: 'A', dept: '생산관리부', level: 3, status: '평가중' },
-  { id: 'cand2', name: '이지훈', email: 'jh.lee@atecmobility.kr', affiliate: 'B', dept: '서비스운영팀', level: 3, status: '평가중' },
-  { id: 'cand3', name: '박서준', email: 'sj.park@ateccn.kr', affiliate: 'C', dept: '영업기획부', level: 3, status: '완료' },
-  { id: 'cand4', name: '최예진', email: 'yj.choi@atecsystem.kr', affiliate: 'D', dept: '엔지니어링팀', level: 3, status: '대기' },
-  { id: 'cand5', name: '정우성', email: 'ws.jung@atecauto.kr', affiliate: 'E', dept: '물류개발실', level: 3, status: '대기' },
+  { id: 'cand1', name: '김민지', email: 'mj.kim@atec.kr', affiliate: 'A', dept: '생산관리부', level: 3, status: '평가중', evalDate: '2026-07-15' },
+  { id: 'cand2', name: '이지훈', email: 'jh.lee@atecmobility.kr', affiliate: 'B', dept: '서비스운영팀', level: 3, status: '평가중', evalDate: '2026-07-18' },
+  { id: 'cand3', name: '박서준', email: 'sj.park@ateccn.kr', affiliate: 'C', dept: '영업기획부', level: 3, status: '완료', evalDate: '2026-07-20' },
+  { id: 'cand4', name: '최예진', email: 'yj.choi@atecsystem.kr', affiliate: 'D', dept: '엔지니어링팀', level: 3, status: '대기', evalDate: '2026-07-22' },
+  { id: 'cand5', name: '정우성', email: 'ws.jung@atecauto.kr', affiliate: 'E', dept: '물류개발실', level: 3, status: '대기', evalDate: '2026-07-25' },
 
   // Level 4 Candidates
-  { id: 'cand6', name: '한지민', email: 'jm.han@atec.kr', affiliate: 'A', dept: '기술연구소', level: 4, status: '평가중' },
-  { id: 'cand7', name: '윤도현', email: 'dh.yoon@atecmobility.kr', affiliate: 'B', dept: 'R&D연구실', level: 4, status: '대기' },
-  { id: 'cand8', name: '강동원', email: 'dw.kang@atecsystem.kr', affiliate: 'D', dept: '클라우드개발실', level: 4, status: '완료' },
-  { id: 'cand9', name: '송혜교', email: 'hk.song@ateccomputer.kr', affiliate: 'F', dept: 'S/W개발팀', level: 4, status: '대기' }
+  { id: 'cand6', name: '한지민', email: 'jm.han@atec.kr', affiliate: 'A', dept: '기술연구소', level: 4, status: '평가중', evalDate: '2026-07-16' },
+  { id: 'cand7', name: '윤도현', email: 'dh.yoon@atecmobility.kr', affiliate: 'B', dept: 'R&D연구실', level: 4, status: '대기', evalDate: '2026-07-21' },
+  { id: 'cand8', name: '강동원', email: 'dw.kang@atecsystem.kr', affiliate: 'D', dept: '클라우드개발실', level: 4, status: '완료', evalDate: '2026-07-22' },
+  { id: 'cand9', name: '송혜교', email: 'hk.song@ateccomputer.kr', affiliate: 'F', dept: 'S/W개발팀', level: 4, status: '대기', evalDate: '2026-07-28' }
 ];
 
 export const submissions: Submission[] = [

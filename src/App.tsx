@@ -46,6 +46,7 @@ import type {
   Score,
   EvaluationResult
 } from './data/mockData';
+import { MonthlyCalendar } from './components/MonthlyCalendar';
 import { questions } from './data/questions';
 
 export default function App() {
@@ -259,6 +260,7 @@ export default function App() {
   const [newCandAffiliate, setNewCandAffiliate] = useState('A');
   const [newCandDept, setNewCandDept] = useState('');
   const [newCandLevel, setNewCandLevel] = useState<3 | 4>(3);
+  const [newCandEvalDate, setNewCandEvalDate] = useState('2026-07-22');
   const [newSubTitle, setNewSubTitle] = useState('');
   const [newSubCategory, setNewSubCategory] = useState<'웹/앱' | 'RAG/챗봇' | '데이터분석' | '업무자동화'>('RAG/챗봇');
   const [newSubPainPoint, setNewSubPainPoint] = useState('');
@@ -325,7 +327,8 @@ export default function App() {
       affiliate: newCandAffiliate,
       dept: newCandDept,
       level: newCandLevel,
-      status: '대기'
+      status: '대기',
+      evalDate: newCandEvalDate || '2026-07-22'
     };
 
     const newSubmission: Submission = {
@@ -953,6 +956,24 @@ export default function App() {
               </div>
             </div>
 
+            {/* Monthly Evaluation Schedule Calendar */}
+            <MonthlyCalendar 
+              currentUser={currentUser}
+              candidatesList={candidatesList}
+              committeesList={committeesList}
+              onSelectSchedule={(cand, targetView) => {
+                setSelectedCandidate(cand);
+                if (targetView === 'report' && cand.status === '완료') {
+                  setView('report');
+                } else {
+                  setAdminAffiliateFilter('all');
+                  setAdminLevelFilter('all');
+                  setAdminStatusFilter('all');
+                  setView('admin');
+                }
+              }}
+            />
+
             {/* Stats Dashboard Cards */}
             <div className="grid-4" style={{ marginBottom: '2rem' }}>
               <div className="card stats-card" onClick={() => setStatsModalType('total')} title="클릭 시 전체 지원자 명단 보기">
@@ -1386,6 +1407,14 @@ export default function App() {
                         <option value="업무자동화">업무자동화 (RPA & LLM 연동)</option>
                       </select>
                     </div>
+                    <div className="form-group">
+                      <label>심사 예정일자 (evalDate) *</label>
+                      <input 
+                        type="date" 
+                        value={newCandEvalDate} 
+                        onChange={(e) => setNewCandEvalDate(e.target.value)} 
+                      />
+                    </div>
                   </div>
 
                   <div className="form-group">
@@ -1573,11 +1602,28 @@ export default function App() {
         {view === 'reviewer' && (
           <div>
             <div style={{ marginBottom: '1.5rem' }}>
-              <h2>AICA 심사위원 배정 과제 큐</h2>
+              <h2>AICA 심사위원 배정 과제 큐 & 월별 일정</h2>
               <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>
-                심사위원 <strong>{currentUser.name}</strong> 님에게 배정된 AICA Level 3 & 4 자격검정 리스트입니다.
+                심사위원 <strong>{currentUser.name}</strong> 님에게 배정된 AICA Level 3 & 4 자격검정 일정 및 리스트입니다.
               </p>
             </div>
+
+            {/* Monthly Evaluation Schedule Calendar */}
+            <MonthlyCalendar 
+              currentUser={currentUser}
+              candidatesList={candidatesList}
+              committeesList={committeesList}
+              onSelectSchedule={(cand, targetView) => {
+                setSelectedCandidate(cand);
+                if (targetView === 'evaluate') {
+                  setView('evaluate');
+                } else if (targetView === 'report' && cand.status === '완료') {
+                  setView('report');
+                } else {
+                  setView('reviewer');
+                }
+              }}
+            />
 
             <div className="card">
               <table>
@@ -1719,6 +1765,10 @@ export default function App() {
                     <div style={{ fontSize: '0.9rem' }}>
                       <strong style={{ color: 'var(--accent-secondary)' }}>과제 제안명: </strong>
                       {currentSubmission.title}
+                    </div>
+                    <div style={{ display: 'flex', gap: '1rem', fontSize: '0.78rem', color: 'var(--text-secondary)', background: 'rgba(255,255,255,0.03)', padding: '0.4rem 0.6rem', borderRadius: '4px', border: '1px solid var(--border-color)' }}>
+                      <span>📅 <strong>과제 제출 일시:</strong> {currentSubmission.submittedAt}</span>
+                      <span>⏱️ <strong>심사 시행 일자:</strong> {selectedCandidate.evalDate || '2026-07-22'}</span>
                     </div>
                     <div style={{ background: 'rgba(0,0,0,0.2)', padding: '0.75rem', borderRadius: '6px' }}>
                       <strong style={{ fontSize: '0.8rem', color: 'var(--color-danger)' }}>1. Pain Point (현업 애로사항):</strong>
@@ -2264,7 +2314,20 @@ export default function App() {
                   </tr>
                   <tr>
                     <th style={{ background: '#f8fafc', border: '1px solid #cbd5e1', color: '#475569' }}>과제 제안명</th>
-                    <td colSpan={3} style={{ border: '1px solid #cbd5e1' }}><strong>{currentSubmission?.title}</strong></td>
+                    <td style={{ border: '1px solid #cbd5e1' }}><strong>{currentSubmission?.title}</strong></td>
+                    <th style={{ background: '#f8fafc', border: '1px solid #cbd5e1', color: '#475569' }}>과제 제출 일시</th>
+                    <td style={{ border: '1px solid #cbd5e1' }}>{currentSubmission?.submittedAt || '2026-07-15 14:00'}</td>
+                  </tr>
+                  <tr>
+                    <th style={{ background: '#f8fafc', border: '1px solid #cbd5e1', color: '#475569' }}>심사 시행 일자</th>
+                    <td style={{ border: '1px solid #cbd5e1' }}><strong>{selectedCandidate.evalDate || '2026-07-22'}</strong></td>
+                    <th style={{ background: '#f8fafc', border: '1px solid #cbd5e1', color: '#475569' }}>최종 승인 일시</th>
+                    <td style={{ border: '1px solid #cbd5e1' }}>
+                      {scoresList.filter(s => {
+                        const comm = committeesList.find(co => co.candidateId === selectedCandidate.id);
+                        return s.committeeId === comm?.id;
+                      }).slice(-1)[0]?.submittedAt || '2026-07-22 14:30'}
+                    </td>
                   </tr>
                 </tbody>
               </table>
@@ -2323,6 +2386,7 @@ export default function App() {
                       </>
                     )}
                     <th style={{ border: '1px solid #cbd5e1', color: '#475569', textAlign: 'center' }}>종합 점수</th>
+                    <th style={{ border: '1px solid #cbd5e1', color: '#475569', textAlign: 'center' }}>채점 제출 일시</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -2343,6 +2407,7 @@ export default function App() {
                           <td style={{ border: '1px solid #cbd5e1' }}>{score.score2}점</td>
                           <td style={{ border: '1px solid #cbd5e1' }}>{score.score3}점</td>
                           <td style={{ border: '1px solid #cbd5e1', background: '#f8fafc' }}><strong>{score.totalScore}점</strong></td>
+                          <td style={{ border: '1px solid #cbd5e1', fontSize: '0.78rem', color: '#64748b' }}>{score.submittedAt || '2026-07-22 14:00'}</td>
                         </tr>
                       );
                     })}
