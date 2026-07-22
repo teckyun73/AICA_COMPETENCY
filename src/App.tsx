@@ -287,7 +287,7 @@ export default function App() {
   const [newSubSolution, setNewSubSolution] = useState('');
   const [newSubReportSummary, setNewSubReportSummary] = useState('');
   const [newSubCodeStructure, setNewSubCodeStructure] = useState('');
-  const [newSubDemoUrl, setNewSubDemoUrl] = useState('https://demo.atec.kr/mock-app');
+  const [newSubDemoUrl, setNewSubDemoUrl] = useState('https://ateccnkr.sharepoint.com/sites/AI/_layouts/15/embed.aspx?UniqueId=ab7b3565-0b8c-4d11-a6c1-31ed8d8d5206&embed=%7B%22ust%22%3Atrue%2C%22hv%22%3A%22CopyEmbedCode%22%7D&referrer=StreamWebApp&referrerScenario=EmbedDialog.Create');
   const [newSubReportUrl, setNewSubReportUrl] = useState('https://gw.atec.kr/share/Report.pdf');
   const [newSubCodeUrl, setNewSubCodeUrl] = useState('https://gitlab.atec.kr/mock-repo');
   const [newReviewer1, setNewReviewer1] = useState(''); // business
@@ -2263,91 +2263,72 @@ export default function App() {
                           {(() => {
                             const isSharePointVideo = currentSubmission.demoUrl.includes('sharepoint.com') || currentSubmission.demoUrl.includes('onedrive') || currentSubmission.demoUrl.includes('office.com');
 
-                            if (sandboxMode === 'preview') {
+                            const parseEmbedUrl = (rawUrl: string) => {
+                              if (!rawUrl) return '';
+                              let url = rawUrl.trim();
+
+                              // 1. If user pasted an HTML <iframe ... src="URL" ...> snippet, extract inner src URL
+                              const iframeMatch = url.match(/src=["']([^"']+)["']/i);
+                              if (iframeMatch && iframeMatch[1]) {
+                                url = iframeMatch[1];
+                              }
+
+                              // 2. YouTube watch URL -> embed URL
+                              const ytMatch = url.match(/(?:youtube\.com\/(?:watch\?.*v=|embed\/|v\/)|youtu\.be\/)([\w-]{11})/);
+                              if (ytMatch && ytMatch[1]) {
+                                return `https://www.youtube.com/embed/${ytMatch[1]}?autoplay=1&mute=1&rel=0&enablejsapi=1`;
+                              }
+
+                              // 3. SharePoint share link (:v:) -> embed.aspx
+                              if (url.includes('sharepoint.com') && url.includes(':v:') && !url.includes('/_layouts/15/embed.aspx')) {
+                                return url.includes('?') ? `${url}&action=embedview` : `${url}?action=embedview`;
+                              }
+
+                              return url;
+                            };
+
+                            const embedUrl = parseEmbedUrl(currentSubmission.demoUrl);
+
+                            if (sandboxMode === 'preview' || sandboxMode === 'video') {
                               return (
                                 <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', position: 'relative' }}>
-                                  {isSharePointVideo ? (
-                                    /* SharePoint Video Dedicated Inline Player Card */
-                                    <div style={{
+                                  <div style={{ background: 'rgba(59, 130, 246, 0.15)', borderBottom: '1px solid rgba(59, 130, 246, 0.3)', padding: '0.35rem 0.75rem', fontSize: '0.7rem', color: '#93c5fd', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                    <span>🎥 <strong>16:9 임베드 미디어:</strong> {currentSubmission.title} (SharePoint Stream / YouTube / Live Demo)</span>
+                                    <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
+                                      <button
+                                        type="button"
+                                        className="btn-secondary"
+                                        style={{ padding: '0.1rem 0.4rem', fontSize: '0.68rem', whiteSpace: 'nowrap' }}
+                                        onClick={() => setSandboxMode('simulator')}
+                                      >
+                                        🎮 대화형 AI 시연 앱
+                                      </button>
+                                      <a
+                                        href={embedUrl}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="btn-primary"
+                                        style={{ padding: '0.1rem 0.45rem', fontSize: '0.68rem', whiteSpace: 'nowrap', textDecoration: 'none', background: '#3b82f6' }}
+                                      >
+                                        <ExternalLink size={10} /> 새창 (전체화면)
+                                      </a>
+                                    </div>
+                                  </div>
+
+                                  <iframe
+                                    id="demo-sandbox-frame"
+                                    src={embedUrl}
+                                    title={currentSubmission.title || "AICA Candidate Demo Sandbox"}
+                                    style={{
                                       width: '100%',
-                                      height: '100%',
-                                      display: 'flex',
-                                      flexDirection: 'column',
-                                      justifyContent: 'center',
-                                      alignItems: 'center',
-                                      padding: '1.5rem',
-                                      boxSizing: 'border-box',
-                                      background: 'radial-gradient(circle at center, #1e293b 0%, #090d16 100%)',
-                                      color: '#ffffff',
-                                      textAlign: 'center'
-                                    }}>
-                                      <div style={{ background: 'rgba(59, 130, 246, 0.15)', border: '1px solid rgba(59, 130, 246, 0.4)', padding: '0.3rem 0.8rem', borderRadius: '20px', fontSize: '0.72rem', color: '#93c5fd', marginBottom: '0.75rem', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
-                                        <Video size={14} /> 🔒 SharePoint 사내 보안 동영상 링크 연동됨
-                                      </div>
-                                      
-                                      <h4 style={{ fontSize: '1rem', color: '#ffffff', margin: '0 0 0.5rem 0', fontWeight: 'bold', maxWidth: '600px' }}>
-                                        {currentSubmission.title}
-                                      </h4>
-                                      
-                                      <p style={{ fontSize: '0.78rem', color: '#94a3b8', maxWidth: '560px', margin: '0 0 1.25rem 0', lineHeight: '1.4' }}>
-                                        💡 사내 SharePoint 동영상(<strong>ateccnkr.sharepoint.com</strong>)은 MS SSO 보안 로그인 정책으로 타 웹사이트 내 iframe 직접 삽입이 통제됩니다. 아래 버튼을 눌러 100% 원본 해상도로 재생하거나 모의 시연 앱을 실행하세요.
-                                      </p>
-
-                                      <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', justifyContent: 'center' }}>
-                                        <a
-                                          href={currentSubmission.demoUrl}
-                                          target="_blank"
-                                          rel="noreferrer"
-                                          className="btn-primary"
-                                          style={{ padding: '0.5rem 1.25rem', fontSize: '0.82rem', display: 'flex', alignItems: 'center', gap: '0.4rem', background: '#3b82f6', textDecoration: 'none' }}
-                                        >
-                                          <ExternalLink size={15} /> 🎬 SharePoint 비디오 즉시 재생 (새창)
-                                        </a>
-                                        <button
-                                          type="button"
-                                          className="btn-secondary"
-                                          style={{ padding: '0.5rem 1rem', fontSize: '0.82rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}
-                                          onClick={() => setSandboxMode('simulator')}
-                                        >
-                                          <Play size={14} /> 🎮 대화형 AI 모의 시연 실행
-                                        </button>
-                                      </div>
-                                    </div>
-                                  ) : (
-                                    /* Standard Web / YouTube Embed Viewport */
-                                    <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', position: 'relative' }}>
-                                      <div style={{ background: 'rgba(245, 158, 11, 0.15)', borderBottom: '1px solid rgba(245, 158, 11, 0.3)', padding: '0.35rem 0.75rem', fontSize: '0.7rem', color: '#fef08a', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                        <span>💡 <strong>보안 안내:</strong> 외부 웹사이트 보안 설정(X-Frame-Options)으로 인해 연결이 거부되는 경우, 상단 <strong>[🎮 대화형 모의 시연 앱]</strong>을 클릭하면 심사 창 안에서 100% 바로 가동해 보실 수 있습니다.</span>
-                                        <button
-                                          type="button"
-                                          className="btn-secondary"
-                                          style={{ padding: '0.1rem 0.4rem', fontSize: '0.68rem', whiteSpace: 'nowrap' }}
-                                          onClick={() => setSandboxMode('simulator')}
-                                        >
-                                          🎮 시연 앱으로 전환
-                                        </button>
-                                      </div>
-
-                                      <iframe
-                                        id="demo-sandbox-frame"
-                                        src={(() => {
-                                          const url = currentSubmission.demoUrl;
-                                          const ytMatch = url?.match(/(?:youtube\.com\/(?:watch\?.*v=|embed\/|v\/)|youtu\.be\/)([\w-]{11})/);
-                                          if (ytMatch && ytMatch[1]) {
-                                            return `https://www.youtube.com/embed/${ytMatch[1]}?autoplay=1&mute=1&rel=0&enablejsapi=1`;
-                                          }
-                                          return url;
-                                        })()}
-                                        title="AICA Candidate Demo Sandbox"
-                                        style={{
-                                          width: '100%',
-                                          flex: 1,
-                                          border: 'none',
-                                          background: '#0f172a'
-                                        }}
-                                      />
-                                    </div>
-                                  )}
+                                      flex: 1,
+                                      border: 'none',
+                                      background: '#0f172a'
+                                    }}
+                                    allowFullScreen
+                                    scrolling="no"
+                                    allow="autoplay; fullscreen"
+                                  />
                                 </div>
                               );
                             }

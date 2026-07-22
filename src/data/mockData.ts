@@ -273,7 +273,7 @@ export const submissions: Submission[] = [
     solution: '과거 공정 불량 로그 및 500페이지 분량의 설비 점검 매뉴얼을 벡터 DB화하고 RAG(검색 증강 생성) 아키텍처를 연동하여, 불량 코드 입력 시 원인 후보 3가지와 조치법을 즉시 제안하는 챗봇 구축.',
     reportSummary: '- 과제명: 공정 불량 분석 지원 봇 PoC\n- 적용 모델: GPT-4o-mini (사내 API Gateway 연동)\n- 데이터셋: 설비 로그 데이터 약 2.5만 건, 매뉴얼 PDF 3종\n- 성과: 평균 원인 분석 리드타임 4시간 -> 30분으로 87.5% 단축 완료\n- 안전장치: PII 마스킹 정규식 적용 및 최종 조치 전 현업 팀장 수동 검수 승인 프로세스 수립.',
     codeStructure: '|- app.py (Streamlit Web UI)\n|- rag_engine.py (LangChain RAG Chain)\n|- vector_store.py (ChromaDB Vector Store & Embedding)\n|- utils.py (PII Masking & Log Audit)\n|- requirements.txt (Dependency Lock)\n|- README.md (Setup Guide)',
-    demoUrl: 'https://demo.atec.kr/smart-factory-rag',
+    demoUrl: 'https://ateccnkr.sharepoint.com/sites/AI/_layouts/15/embed.aspx?UniqueId=ab7b3565-0b8c-4d11-a6c1-31ed8d8d5206&embed=%7B%22ust%22%3Atrue%2C%22hv%22%3A%22CopyEmbedCode%22%7D&referrer=StreamWebApp&referrerScenario=EmbedDialog.Create',
     reportUrl: 'https://gw.atec.kr/share/AICA_L3_Factory_Report.pdf',
     codeUrl: 'https://gitlab.atec.kr/mj.kim/factory-rag-agent',
     submittedAt: '2026-07-10 14:00'
