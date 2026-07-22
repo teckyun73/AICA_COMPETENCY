@@ -23,7 +23,8 @@ import {
   ExternalLink,
   Maximize2,
   RefreshCw,
-  Monitor
+  Monitor,
+  Edit
 } from 'lucide-react';
 import { 
   users as initialUsers, 
@@ -267,8 +268,9 @@ export default function App() {
     alert('모든 평가 데이터가 성공적으로 초기화되었습니다.\n우측 상단의 "+ 신규 평가과제 등록 & 패널 배정" 버튼을 눌러 실무 운영을 시작하세요.');
   };
 
-  // Admin Add Candidate Form State
+  // Admin Add & Edit Candidate Form State
   const [showAddForm, setShowAddForm] = useState(false);
+  const [editingCandidateId, setEditingCandidateId] = useState<string | null>(null);
   const [newCandName, setNewCandName] = useState('');
   const [newCandEmail, setNewCandEmail] = useState('');
   const [newCandAffiliate, setNewCandAffiliate] = useState('A');
@@ -287,6 +289,73 @@ export default function App() {
   const [newReviewer1, setNewReviewer1] = useState(''); // business
   const [newReviewer2, setNewReviewer2] = useState(''); // tech
   const [newReviewer3, setNewReviewer3] = useState(''); // security
+
+  const resetAddForm = () => {
+    setEditingCandidateId(null);
+    setNewCandName('');
+    setNewCandEmail('');
+    setNewCandAffiliate('A');
+    setNewCandDept('');
+    setNewCandLevel(3);
+    setNewCandEvalDate('2026-07-22');
+    setNewSubTitle('');
+    setNewSubCategory('RAG/챗봇');
+    setNewSubPainPoint('');
+    setNewSubSolution('');
+    setNewSubReportSummary('');
+    setNewSubCodeStructure('');
+    setNewSubDemoUrl('https://demo.atec.kr/mock-app');
+    setNewSubReportUrl('https://gw.atec.kr/share/Report.pdf');
+    setNewSubCodeUrl('https://gitlab.atec.kr/mock-repo');
+    setNewReviewer1('');
+    setNewReviewer2('');
+    setNewReviewer3('');
+  };
+
+  const handleOpenEditForm = (cand: Candidate) => {
+    const sub = submissionsList.find(s => s.candidateId === cand.id);
+    const comm = committeesList.find(c => c.candidateId === cand.id);
+
+    setEditingCandidateId(cand.id);
+    setNewCandName(cand.name);
+    setNewCandEmail(cand.email);
+    setNewCandAffiliate(cand.affiliate);
+    setNewCandDept(cand.dept);
+    setNewCandLevel(cand.level);
+    setNewCandEvalDate(cand.evalDate || '2026-07-22');
+
+    if (sub) {
+      setNewSubTitle(sub.title || '');
+      setNewSubCategory(sub.category || 'RAG/챗봇');
+      setNewSubPainPoint(sub.painPoint || '');
+      setNewSubSolution(sub.solution || '');
+      setNewSubReportSummary(sub.reportSummary || '');
+      setNewSubCodeStructure(sub.codeStructure || '');
+      setNewSubDemoUrl(sub.demoUrl || 'https://demo.atec.kr/mock-app');
+      setNewSubReportUrl(sub.reportUrl || 'https://gw.atec.kr/share/Report.pdf');
+      setNewSubCodeUrl(sub.codeUrl || 'https://gitlab.atec.kr/mock-repo');
+    } else {
+      setNewSubTitle('');
+      setNewSubCategory('RAG/챗봇');
+      setNewSubPainPoint('');
+      setNewSubSolution('');
+      setNewSubReportSummary('');
+      setNewSubCodeStructure('');
+      setNewSubDemoUrl('https://demo.atec.kr/mock-app');
+      setNewSubReportUrl('https://gw.atec.kr/share/Report.pdf');
+      setNewSubCodeUrl('https://gitlab.atec.kr/mock-repo');
+    }
+
+    if (comm) {
+      setNewReviewer1(comm.reviewer1Id);
+      setNewReviewer2(comm.reviewer2Id);
+      setNewReviewer3(comm.reviewer3Id);
+    } else {
+      handleAutoAssignPanel(cand.affiliate);
+    }
+
+    setShowAddForm(true);
+  };
 
   // Detail Modal state for dashboard statistics
   const [statsModalType, setStatsModalType] = useState<'total' | 'completed' | 'evaluating' | 'pending' | null>(null);
@@ -314,10 +383,10 @@ export default function App() {
   };
 
   useEffect(() => {
-    if (showAddForm) {
+    if (showAddForm && !editingCandidateId) {
       handleAutoAssignPanel(newCandAffiliate);
     }
-  }, [newCandAffiliate, showAddForm]);
+  }, [newCandAffiliate, showAddForm, editingCandidateId]);
 
   const handleRegisterTask = () => {
     if (!newCandName || !newCandEmail || !newCandDept || !newSubTitle || !newSubPainPoint || !newSubSolution || !newSubReportSummary) {
@@ -327,6 +396,100 @@ export default function App() {
 
     if (!newReviewer1 || !newReviewer2 || !newReviewer3) {
       alert('심사위원 패널 3인을 모두 지정해야 합니다.');
+      return;
+    }
+
+    if (editingCandidateId) {
+      // EDIT EXISTING TASK
+      const updatedCandidates = candidatesList.map(c => 
+        c.id === editingCandidateId ? {
+          ...c,
+          name: newCandName,
+          email: newCandEmail,
+          affiliate: newCandAffiliate,
+          dept: newCandDept,
+          level: newCandLevel,
+          evalDate: newCandEvalDate || '2026-07-22'
+        } : c
+      );
+      setCandidatesList(updatedCandidates);
+
+      const targetSub = submissionsList.find(s => s.candidateId === editingCandidateId);
+      let updatedSubmissions: Submission[];
+      let updatedSub: Submission;
+
+      if (targetSub) {
+        updatedSub = {
+          ...targetSub,
+          title: newSubTitle,
+          category: newSubCategory,
+          painPoint: newSubPainPoint,
+          solution: newSubSolution,
+          reportSummary: newSubReportSummary,
+          codeStructure: newSubCodeStructure,
+          demoUrl: newSubDemoUrl,
+          reportUrl: newSubReportUrl,
+          codeUrl: newSubCodeUrl
+        };
+        updatedSubmissions = submissionsList.map(s => s.candidateId === editingCandidateId ? updatedSub : s);
+      } else {
+        updatedSub = {
+          id: `sub_${editingCandidateId}`,
+          candidateId: editingCandidateId,
+          title: newSubTitle,
+          category: newSubCategory,
+          painPoint: newSubPainPoint,
+          solution: newSubSolution,
+          reportSummary: newSubReportSummary,
+          codeStructure: newSubCodeStructure,
+          demoUrl: newSubDemoUrl,
+          reportUrl: newSubReportUrl,
+          codeUrl: newSubCodeUrl,
+          submittedAt: new Date().toISOString().slice(0, 16).replace('T', ' ')
+        };
+        updatedSubmissions = [...submissionsList, updatedSub];
+      }
+      setSubmissionsList(updatedSubmissions);
+
+      const targetComm = committeesList.find(co => co.candidateId === editingCandidateId);
+      let updatedCommittees: Committee[];
+      let updatedComm: Committee;
+
+      if (targetComm) {
+        updatedComm = {
+          ...targetComm,
+          reviewer1Id: newReviewer1,
+          reviewer2Id: newReviewer2,
+          reviewer3Id: newReviewer3
+        };
+        updatedCommittees = committeesList.map(co => co.candidateId === editingCandidateId ? updatedComm : co);
+      } else {
+        updatedComm = {
+          id: `com_${editingCandidateId}`,
+          candidateId: editingCandidateId,
+          reviewer1Id: newReviewer1,
+          reviewer2Id: newReviewer2,
+          reviewer3Id: newReviewer3,
+          status: '대기'
+        };
+        updatedCommittees = [...committeesList, updatedComm];
+      }
+      setCommitteesList(updatedCommittees);
+
+      if (isFirebaseConfigured && db) {
+        try {
+          const updatedCandObj = updatedCandidates.find(c => c.id === editingCandidateId);
+          if (updatedCandObj) setDoc(doc(db, 'candidates', editingCandidateId), updatedCandObj);
+          setDoc(doc(db, 'submissions', updatedSub.id), updatedSub);
+          setDoc(doc(db, 'committees', updatedComm.id), updatedComm);
+        } catch (e) {
+          console.error('Error updating task in Firestore:', e);
+        }
+      }
+
+      resetAddForm();
+      setShowAddForm(false);
+      alert(`등록된 평가과제 [${newSubTitle}] 및 지원자 [${newCandName}] 정보가 성공적으로 수정되었습니다.`);
       return;
     }
 
@@ -988,6 +1151,7 @@ export default function App() {
                 <button 
                   className="btn-primary" 
                   onClick={() => {
+                    resetAddForm();
                     setShowAddForm(true);
                     handleAutoAssignPanel('A');
                   }}
@@ -1168,6 +1332,7 @@ export default function App() {
                             className="btn-primary" 
                             style={{ fontSize: '0.8rem', padding: '0.4rem 0.85rem' }}
                             onClick={() => {
+                              resetAddForm();
                               setShowAddForm(true);
                               handleAutoAssignPanel('A');
                             }}
@@ -1228,21 +1393,30 @@ export default function App() {
                             ) : '-'}
                           </td>
                           <td>
-                            {cand.status === '완료' ? (
+                            <div style={{ display: 'flex', gap: '0.35rem', alignItems: 'center' }}>
                               <button 
                                 className="btn-secondary" 
-                                style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem' }}
-                                onClick={() => {
-                                  setSelectedCandidate(cand);
-                                  setView('report');
-                                }}
+                                style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}
+                                onClick={() => handleOpenEditForm(cand)}
+                                title="과제 정보 및 심사패널 배정 수정"
                               >
-                                <FileText size={12} />
-                                보고서 보기
+                                <Edit size={12} />
+                                수정
                               </button>
-                            ) : (
-                              <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>평가대기</span>
-                            )}
+                              {cand.status === '완료' && (
+                                <button 
+                                  className="btn-secondary" 
+                                  style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}
+                                  onClick={() => {
+                                    setSelectedCandidate(cand);
+                                    setView('report');
+                                  }}
+                                >
+                                  <FileText size={12} />
+                                  보고서
+                                </button>
+                              )}
+                            </div>
                           </td>
                         </tr>
                       );
@@ -1292,6 +1466,7 @@ export default function App() {
                           <th>심사 패널</th>
                           <th>상태</th>
                           <th>종합점수</th>
+                          <th>액션</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -1344,6 +1519,20 @@ export default function App() {
                                   </span>
                                 </td>
                                 <td><strong>{res ? `${res.averageScore} 점` : '-'}</strong></td>
+                                <td>
+                                  <button 
+                                    className="btn-secondary" 
+                                    style={{ padding: '0.2rem 0.45rem', fontSize: '0.72rem', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}
+                                    onClick={() => {
+                                      setStatsModalType(null);
+                                      handleOpenEditForm(cand);
+                                    }}
+                                    title="과제 정보 및 심사패널 배정 수정"
+                                  >
+                                    <Edit size={11} />
+                                    수정
+                                  </button>
+                                </td>
                               </tr>
                             );
                           })}
@@ -1370,11 +1559,14 @@ export default function App() {
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.75rem', marginBottom: '1.5rem' }}>
                     <h3 style={{ fontSize: '1.2rem', color: 'var(--accent-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem', margin: 0 }}>
                       <Award size={20} />
-                      신규 AICA 평가과제 등록 및 심사패널 배정
+                      {editingCandidateId ? '등록된 AICA 평가과제 & 심사패널 정보 수정' : '신규 AICA 평가과제 등록 및 심사패널 배정'}
                     </h3>
                     <button 
                       className="btn-secondary" 
-                      onClick={() => setShowAddForm(false)}
+                      onClick={() => {
+                        setShowAddForm(false);
+                        resetAddForm();
+                      }}
                       style={{ padding: '0.25rem 0.5rem', minWidth: 'auto' }}
                     >
                       ✕
@@ -1620,7 +1812,10 @@ export default function App() {
                       type="button" 
                       className="btn-secondary" 
                       style={{ flex: 1 }}
-                      onClick={() => setShowAddForm(false)}
+                      onClick={() => {
+                        setShowAddForm(false);
+                        resetAddForm();
+                      }}
                     >
                       취소
                     </button>
@@ -1630,7 +1825,7 @@ export default function App() {
                       style={{ flex: 2 }}
                       onClick={handleRegisterTask}
                     >
-                      과제 등록 및 심사 배정 완료
+                      {editingCandidateId ? '과제 및 배정 정보 수정 완료' : '과제 등록 및 심사 배정 완료'}
                     </button>
                   </div>
                 </div>
