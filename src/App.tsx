@@ -15,7 +15,9 @@ import {
   BookOpen,
   Scale,
   Database,
-  RotateCcw
+  RotateCcw,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import { 
   users as initialUsers, 
@@ -58,6 +60,7 @@ export default function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [loginId, setLoginId] = useState(''); // ID = 성명
   const [loginPw, setLoginPw] = useState(''); // Password = 이메일
+  const [showPassword, setShowPassword] = useState(false);
   const [loginError, setLoginError] = useState('');
   const [showHint, setShowHint] = useState(false);
 
@@ -839,13 +842,40 @@ export default function App() {
 
                 <div className="form-group" style={{ marginBottom: 0 }}>
                   <label>이메일 (Password) *</label>
-                  <input 
-                    type="password" 
-                    placeholder="사내 이메일 주소를 입력해 주세요" 
-                    value={loginPw}
-                    onChange={(e) => setLoginPw(e.target.value)}
-                    required
-                  />
+                  <div style={{ position: 'relative', width: '100%' }}>
+                    <input 
+                      type={showPassword ? 'text' : 'password'} 
+                      placeholder="사내 이메일 주소를 입력해 주세요" 
+                      value={loginPw}
+                      onChange={(e) => setLoginPw(e.target.value)}
+                      required
+                      style={{ paddingRight: '2.5rem' }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      style={{
+                        position: 'absolute',
+                        right: '0.75rem',
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        background: 'none',
+                        border: 'none',
+                        color: 'var(--text-secondary)',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: '0.25rem',
+                        borderRadius: '4px',
+                        transition: 'color 0.2s ease'
+                      }}
+                      title={showPassword ? '이메일 숨기기' : '이메일 표시하기'}
+                      aria-label={showPassword ? '이메일 숨기기' : '이메일 표시하기'}
+                    >
+                      {showPassword ? <EyeOff size={18} color="var(--accent-secondary)" /> : <Eye size={18} color="var(--text-muted)" />}
+                    </button>
+                  </div>
                 </div>
 
                 <button type="submit" className="btn-primary" style={{ width: '100%', padding: '0.75rem', marginTop: '0.5rem', fontSize: '0.95rem' }}>
