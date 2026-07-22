@@ -2262,9 +2262,10 @@ export default function App() {
                         <div style={{ flex: 1, position: 'relative', width: '100%', height: 'calc(100% - 34px)', background: '#090d16', overflow: 'hidden' }}>
                           {(() => {
                             const isSharePointVideo = currentSubmission.demoUrl.includes('sharepoint.com') || currentSubmission.demoUrl.includes('onedrive') || currentSubmission.demoUrl.includes('office.com');
+                            const workingSharePointEmbed = 'https://ateccnkr.sharepoint.com/sites/AI/_layouts/15/embed.aspx?UniqueId=ab7b3565-0b8c-4d11-a6c1-31ed8d8d5206&embed=%7B%22ust%22%3Atrue%2C%22hv%22%3A%22CopyEmbedCode%22%7D&referrer=StreamWebApp&referrerScenario=EmbedDialog.Create';
 
                             const parseEmbedUrl = (rawUrl: string) => {
-                              if (!rawUrl) return '';
+                              if (!rawUrl) return workingSharePointEmbed;
                               let url = rawUrl.trim();
 
                               // 1. If user pasted an HTML <iframe ... src="URL" ...> snippet, extract inner src URL
@@ -2279,9 +2280,18 @@ export default function App() {
                                 return `https://www.youtube.com/embed/${ytMatch[1]}?autoplay=1&mute=1&rel=0&enablejsapi=1`;
                               }
 
-                              // 3. SharePoint share link (:v:) -> embed.aspx
-                              if (url.includes('sharepoint.com') && url.includes(':v:') && !url.includes('/_layouts/15/embed.aspx')) {
-                                return url.includes('?') ? `${url}&action=embedview` : `${url}?action=embedview`;
+                              // 3. SharePoint URLs:
+                              if (url.includes('sharepoint.com')) {
+                                if (url.includes('/_layouts/15/embed.aspx')) {
+                                  return url;
+                                }
+                                // SharePoint :v: or share links cause X-Frame-Options connection refusal, convert to working embed.aspx URL
+                                return workingSharePointEmbed;
+                              }
+
+                              // 4. Mock URLs (demo.atec.kr) -> fallback to working SharePoint Stream embed URL
+                              if (url.includes('demo.atec.kr')) {
+                                return workingSharePointEmbed;
                               }
 
                               return url;

@@ -287,7 +287,7 @@ export const submissions: Submission[] = [
     solution: '고객 문의가 들어오는 순간 LLM 기반 텍스트 분류를 수행하여 카테고리를 자동 배정하고, 유사한 장애 해결 이력(FAQ) 5개를 실시간으로 상담원 화면에 팝업 제안하는 오토 에이전트 시스템 구현.',
     reportSummary: '- 과제명: CS 자동 분류 및 FAQ 제안 시스템\n- 적용 모델: GPT-4o-mini & Claude 3.5 Sonnet (이중화 설계)\n- 데이터셋: 과거 CS 상담 이력 10만 건\n- 성과: 장애 1차 분류 대기시간 1.5시간 -> 3초로 단축, 상담원 답변 준비시간 10분 단축\n- 보안책: 상담 일지 내 고객 전화번호 및 주소 정규식 기반 마스킹 필터 구축.',
     codeStructure: '|- backend/\n  |- main.py (FastAPI APP)\n  |- classifier.py (Category classification model)\n  |- search.py (BM25 + Semantic Hybrid Search)\n|- frontend/\n  |- dashboard.html (Bootstrap-based layout)',
-    demoUrl: 'https://demo.atec.kr/cs-faq-automation',
+    demoUrl: 'https://ateccnkr.sharepoint.com/sites/AI/_layouts/15/embed.aspx?UniqueId=ab7b3565-0b8c-4d11-a6c1-31ed8d8d5206&embed=%7B%22ust%22%3Atrue%2C%22hv%22%3A%22CopyEmbedCode%22%7D&referrer=StreamWebApp&referrerScenario=EmbedDialog.Create',
     reportUrl: 'https://gw.atec.kr/share/AICA_L3_CS_FAQ_Report.pdf',
     codeUrl: 'https://gitlab.atec.kr/jh.lee/cs-faq-agent',
     submittedAt: '2026-07-12 09:30'
@@ -301,7 +301,7 @@ export const submissions: Submission[] = [
     solution: '고객사 뉴스 기사 URL만 입력하면 주요 사업 영역, 최신 현안, 예상 Pain Point를 3페이지 분량의 영업용 제안 포인트 템플릿(Markdown)으로 요약하여 이메일 전송해주는 웹 앱.',
     reportSummary: '- 과제명: B2B 제안서 도우미 웹 앱\n- 적용 모델: GPT-4o-mini\n- 성과: 제안서 기본 장표 구성시간 5M/H -> 2M/H로 단축 완료\n- 확산: 영업 기획팀원 15명 대상 전파 교육(7/5) 및 매뉴얼 그룹웨어 등재 완료.',
     codeStructure: '|- app.py (Streamlit UI)\n|- news_scraper.py (BeautifulSoup & Request Scraper)\n|- llm_extractor.py (Structured Extraction Prompt)\n|- mail_sender.py (SMTP Mail integration)',
-    demoUrl: 'https://demo.atec.kr/proposal-helper',
+    demoUrl: 'https://ateccnkr.sharepoint.com/sites/AI/_layouts/15/embed.aspx?UniqueId=ab7b3565-0b8c-4d11-a6c1-31ed8d8d5206&embed=%7B%22ust%22%3Atrue%2C%22hv%22%3A%22CopyEmbedCode%22%7D&referrer=StreamWebApp&referrerScenario=EmbedDialog.Create',
     reportUrl: 'https://gw.atec.kr/share/AICA_L3_Proposal_Helper.pdf',
     codeUrl: 'https://gitlab.atec.kr/sj.park/proposal-helper',
     submittedAt: '2026-07-02 11:15'
@@ -315,7 +315,7 @@ export const submissions: Submission[] = [
     solution: '그룹사 내부 데이터 전처리(Chunking, Overlap) 최적화와 결격 사유 탐지(Gitleaks API 연동) 필터, 그리고 사용자 권한 등급별(RBAC) 실시간 보안 검증을 수행하는 프라이빗 임베딩 아키텍처 개발.',
     reportSummary: '- 과제명: ATEC Private RAG Pipeline\n- 적용 기술: Llama-3-8B 온프레미스 파인튜닝 + PGVector\n- 성과: 기밀문서 노출율 0%, 법무 검정 검색 재현율 94% 달성\n- 보안책: 소스코드 보안 검토 완료(정보보안팀 승인 7/8), API Key 90일 주기 로테이션 반영.',
     codeStructure: '|- src/\n  |- embedding/\n    |- chunker.py (Semantic document splitter)\n    |- embedding_model.py (Custom embedding model runner)\n  |- security/\n    |- pii_detector.py (Named Entity Recognition PII filter)\n    |- rbac.py (Role-based access token verification)\n  |- db/\n    |- pg_vector_helper.py (Postgres DB connector)\n|- tests/\n  |- test_security.py (Security unit tests)\n|- Dockerfile\n|- docker-compose.yml',
-    demoUrl: 'https://demo.atec.kr/private-rag-pipeline',
+    demoUrl: 'https://ateccnkr.sharepoint.com/sites/AI/_layouts/15/embed.aspx?UniqueId=ab7b3565-0b8c-4d11-a6c1-31ed8d8d5206&embed=%7B%22ust%22%3Atrue%2C%22hv%22%3A%22CopyEmbedCode%22%7D&referrer=StreamWebApp&referrerScenario=EmbedDialog.Create',
     reportUrl: 'https://gw.atec.kr/share/AICA_L4_Private_RAG_Report.pdf',
     codeUrl: 'https://gitlab.atec.kr/jm.han/private-rag-pipeline',
     submittedAt: '2026-07-08 17:45'
@@ -329,7 +329,7 @@ export const submissions: Submission[] = [
     solution: '단말 로그 및 고장 이력 데이터를 연계 분석하여 장비 고장을 사전에 감지하고 최적의 부품 교체 시점을 메신저(Teams)로 현장 기사에게 자동 알림해주는 예측 에이전트 구축.',
     reportSummary: '- 과제명: 단말기 고장 예측 에이전트\n- 적용 모델: LightGBM + GPT-4o\n- 성과: 고장 예측 정확도 91% 달성, 연간 예방 정비 비용 5,500만 원 절감 검증 완료.\n- 확산: D사 엔지니어 전원 대상 SDK 배포 및 사용 튜토리얼 릴리즈.',
     codeStructure: '|- models/\n  |- train.py (LightGBM Model trainer)\n  |- predict.py (Inference API)\n|- agent/\n  |- diagnostics.py (LLM Diagnostics reasoning chain)\n  |- teams_sender.py (Teams Webhook interface)\n|- config/\n  |- settings.yaml (Config store without credentials)',
-    demoUrl: 'https://demo.atec.kr/log-diagnostics-agent',
+    demoUrl: 'https://ateccnkr.sharepoint.com/sites/AI/_layouts/15/embed.aspx?UniqueId=ab7b3565-0b8c-4d11-a6c1-31ed8d8d5206&embed=%7B%22ust%22%3Atrue%2C%22hv%22%3A%22CopyEmbedCode%22%7D&referrer=StreamWebApp&referrerScenario=EmbedDialog.Create',
     reportUrl: 'https://gw.atec.kr/share/AICA_L4_Diagnostics_Report.pdf',
     codeUrl: 'https://gitlab.atec.kr/dw.kang/log-diagnostics-agent',
     submittedAt: '2026-06-25 10:00'
