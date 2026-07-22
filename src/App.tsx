@@ -17,7 +17,13 @@ import {
   Database,
   RotateCcw,
   Eye,
-  EyeOff
+  EyeOff,
+  Play,
+  Pause,
+  ExternalLink,
+  Maximize2,
+  RefreshCw,
+  Monitor
 } from 'lucide-react';
 import { 
   users as initialUsers, 
@@ -63,6 +69,11 @@ export default function App() {
   const [showPassword, setShowPassword] = useState(false);
   const [loginError, setLoginError] = useState('');
   const [showHint, setShowHint] = useState(false);
+
+  // Demo Sandbox Player States
+  const [sandboxMode, setSandboxMode] = useState<'preview' | 'video'>('preview');
+  const [isPlayingVideo, setIsPlayingVideo] = useState(false);
+  const [videoProgress, setVideoProgress] = useState(35);
 
   const handleLogin = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -1840,15 +1851,285 @@ export default function App() {
 
                 {activeTab === 'video' && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                    <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border-color)', padding: '1rem', borderRadius: '6px' }}>
-                      <h4 style={{ fontSize: '0.9rem', marginBottom: '0.5rem' }}>시연 동영상 모의 플레이어 (Demo Sandbox)</h4>
-                      <div style={{ width: '100%', height: '180px', background: '#020617', borderRadius: '4px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', border: '1px dashed rgba(255,255,255,0.1)' }}>
-                        <Video size={36} color="var(--text-muted)" style={{ marginBottom: '0.5rem' }} />
-                        <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>[AICA_Level{selectedCandidate.level}_Demo_Play.mp4]</span>
-                        <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>크기: 45MB / 재생 시간: 2분 15초</span>
+                    {/* 16:9 Demo Sandbox Window Frame */}
+                    <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border-color)', padding: '1rem', borderRadius: '8px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+                        <h4 style={{ fontSize: '0.92rem', display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--text-primary)' }}>
+                          <Monitor size={16} color="var(--accent-secondary)" />
+                          시연 동영상 & 라이브 데모 모의 플레이어 (Demo Sandbox)
+                        </h4>
+                        
+                        {/* Sandbox Mode Switcher Buttons */}
+                        <div style={{ display: 'flex', gap: '0.25rem', background: 'rgba(0,0,0,0.3)', padding: '0.2rem', borderRadius: '6px', border: '1px solid var(--border-color)' }}>
+                          <button
+                            type="button"
+                            className={sandboxMode === 'preview' ? 'btn-primary' : 'btn-secondary'}
+                            onClick={() => setSandboxMode('preview')}
+                            style={{ padding: '0.25rem 0.6rem', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}
+                          >
+                            <Monitor size={12} /> 실제 구동 데모 미리보기
+                          </button>
+                          <button
+                            type="button"
+                            className={sandboxMode === 'video' ? 'btn-primary' : 'btn-secondary'}
+                            onClick={() => setSandboxMode('video')}
+                            style={{ padding: '0.25rem 0.6rem', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}
+                          >
+                            <Video size={12} /> 시연 비디오 (MP4)
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* 16:9 Aspect Ratio Display Container */}
+                      <div style={{
+                        width: '100%',
+                        aspectRatio: '16 / 9',
+                        background: '#020617',
+                        borderRadius: '6px',
+                        border: '1px solid rgba(255,255,255,0.15)',
+                        position: 'relative',
+                        overflow: 'hidden',
+                        boxShadow: '0 8px 24px rgba(0, 0, 0, 0.5)',
+                        display: 'flex',
+                        flexDirection: 'column'
+                      }}>
+                        {/* Simulated Browser Address Bar */}
+                        <div style={{
+                          height: '34px',
+                          background: '#0f172a',
+                          borderBottom: '1px solid rgba(255,255,255,0.08)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          padding: '0 0.75rem',
+                          justifyContent: 'space-between',
+                          fontSize: '0.75rem',
+                          flexShrink: 0
+                        }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flex: 1, overflow: 'hidden' }}>
+                            <div style={{ display: 'flex', gap: '0.3rem', flexShrink: 0 }}>
+                              <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#ef4444', display: 'inline-block' }}></span>
+                              <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#f59e0b', display: 'inline-block' }}></span>
+                              <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#10b981', display: 'inline-block' }}></span>
+                            </div>
+                            <div style={{
+                              background: 'rgba(255,255,255,0.06)',
+                              padding: '0.15rem 0.6rem',
+                              borderRadius: '4px',
+                              color: 'var(--text-secondary)',
+                              fontFamily: 'monospace',
+                              fontSize: '0.72rem',
+                              flex: 1,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              marginLeft: '0.5rem',
+                              overflow: 'hidden'
+                            }}>
+                              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                🔒 <strong>https://</strong>{currentSubmission.demoUrl.replace('https://', '')}
+                              </span>
+                              <span style={{ color: '#10b981', fontSize: '0.65rem', fontWeight: 'bold', marginLeft: '0.5rem', flexShrink: 0 }}>
+                                🟢 LIVE DEMO
+                              </span>
+                            </div>
+                          </div>
+
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginLeft: '0.5rem', flexShrink: 0 }}>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const el = document.getElementById('demo-sandbox-frame') as HTMLIFrameElement;
+                                if (el) el.src = el.src;
+                              }}
+                              title="데모 화면 새로고침"
+                              style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                            >
+                              <RefreshCw size={12} />
+                            </button>
+                            <a
+                              href={currentSubmission.demoUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              title="새 창에서 실제 라이브 데모 열기"
+                              style={{ color: 'var(--accent-secondary)', display: 'flex', alignItems: 'center', gap: '0.2rem', textDecoration: 'none', fontSize: '0.7rem', fontWeight: 'bold' }}
+                            >
+                              <ExternalLink size={12} /> 새창
+                            </a>
+                          </div>
+                        </div>
+
+                        {/* 16:9 Body Viewport Content */}
+                        <div style={{ flex: 1, position: 'relative', width: '100%', height: 'calc(100% - 34px)', background: '#090d16', overflow: 'hidden' }}>
+                          {sandboxMode === 'preview' ? (
+                            /* Live Interactive Demo App Window (iframe & overlay) */
+                            <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', position: 'relative' }}>
+                              <iframe
+                                id="demo-sandbox-frame"
+                                src={currentSubmission.demoUrl}
+                                title="AICA Candidate Demo Live Interactive Sandbox"
+                                style={{
+                                  width: '100%',
+                                  height: '100%',
+                                  border: 'none',
+                                  background: '#0f172a'
+                                }}
+                              />
+
+                              {/* Interactive Demo Control & Information Bar Overlay */}
+                              <div style={{
+                                position: 'absolute',
+                                top: 0,
+                                left: 0,
+                                width: '100%',
+                                height: '100%',
+                                pointerEvents: 'none',
+                                background: 'linear-gradient(180deg, rgba(15,23,42,0.15) 0%, rgba(15,23,42,0.85) 100%)',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                justifyContent: 'space-between',
+                                padding: '0.75rem',
+                                boxSizing: 'border-box'
+                              }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                  <div style={{ background: 'rgba(15, 23, 42, 0.9)', backdropFilter: 'blur(4px)', padding: '0.4rem 0.6rem', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.12)' }}>
+                                    <span className="badge badge-level3" style={{ fontSize: '0.65rem', marginBottom: '0.15rem' }}>
+                                      Level {selectedCandidate.level} 실시간 데모 환경
+                                    </span>
+                                    <h5 style={{ fontSize: '0.8rem', color: '#ffffff', margin: 0 }}>{currentSubmission.title}</h5>
+                                  </div>
+                                  <span style={{ background: '#10b981', color: '#020617', fontWeight: 'bold', padding: '0.2rem 0.5rem', borderRadius: '4px', fontSize: '0.65rem', boxShadow: '0 2px 8px rgba(16,185,129,0.3)' }}>
+                                    ● 16:9 데모 샌드박스 세션 연동 중
+                                  </span>
+                                </div>
+
+                                <div style={{
+                                  pointerEvents: 'auto',
+                                  background: 'rgba(15, 23, 42, 0.95)',
+                                  backdropFilter: 'blur(8px)',
+                                  padding: '0.65rem 0.85rem',
+                                  borderRadius: '6px',
+                                  border: '1px solid var(--border-color)',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'space-between',
+                                  gap: '1rem'
+                                }}>
+                                  <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                                    <div>💡 <strong>해결 방안:</strong> {currentSubmission.solution}</div>
+                                    <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '0.15rem' }}>
+                                      심사위원 전용 16:9 뷰포트에서 직접 시연 동작 및 UI를 미리보고 검증할 수 있습니다.
+                                    </div>
+                                  </div>
+                                  <a
+                                    href={currentSubmission.demoUrl}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="btn-primary"
+                                    style={{ padding: '0.35rem 0.75rem', fontSize: '0.75rem', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '0.3rem', background: '#3b82f6' }}
+                                  >
+                                    <ExternalLink size={13} /> 데모 앱 전체 화면
+                                  </a>
+                                </div>
+                              </div>
+                            </div>
+                          ) : (
+                            /* 16:9 Demo Video MP4 Player Mode */
+                            <div style={{
+                              width: '100%',
+                              height: '100%',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              justifyContent: 'space-between',
+                              padding: '0.75rem',
+                              boxSizing: 'border-box',
+                              background: 'radial-gradient(circle at center, #1e293b 0%, #020617 100%)',
+                              position: 'relative'
+                            }}>
+                              {/* Video Title Header Overlay */}
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', zIndex: 2 }}>
+                                <div style={{ fontSize: '0.8rem', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                  <Video size={14} color="var(--accent-primary)" />
+                                  <strong>[AICA_Level{selectedCandidate.level}_Demo_Play.mp4]</strong>
+                                </div>
+                                <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', background: 'rgba(0,0,0,0.5)', padding: '0.15rem 0.4rem', borderRadius: '4px' }}>
+                                  FHD 1080p · 60fps (45MB)
+                                </span>
+                              </div>
+
+                              {/* Center Play/Pause Button */}
+                              <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', zIndex: 2 }}>
+                                <button
+                                  type="button"
+                                  onClick={() => setIsPlayingVideo(!isPlayingVideo)}
+                                  style={{
+                                    width: '56px',
+                                    height: '56px',
+                                    borderRadius: '50%',
+                                    background: isPlayingVideo ? 'rgba(59, 130, 246, 0.9)' : 'rgba(15, 23, 42, 0.85)',
+                                    border: '2px solid var(--accent-primary)',
+                                    color: '#ffffff',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    cursor: 'pointer',
+                                    boxShadow: '0 0 20px rgba(59, 130, 246, 0.5)',
+                                    transition: 'transform 0.2s ease'
+                                  }}
+                                  title={isPlayingVideo ? '일시정지' : '재생'}
+                                >
+                                  {isPlayingVideo ? <Pause size={24} /> : <Play size={24} style={{ marginLeft: '3px' }} />}
+                                </button>
+                              </div>
+
+                              {/* Video Player Bottom Control Bar */}
+                              <div style={{ zIndex: 2, background: 'rgba(15, 23, 42, 0.92)', backdropFilter: 'blur(4px)', padding: '0.4rem 0.65rem', borderRadius: '6px', border: '1px solid rgba(255,255,255,0.08)' }}>
+                                {/* Timeline Progress Bar */}
+                                <div 
+                                  style={{ width: '100%', height: '4px', background: 'rgba(255,255,255,0.2)', borderRadius: '2px', cursor: 'pointer', marginBottom: '0.4rem', position: 'relative' }}
+                                  onClick={(e) => {
+                                    const rect = e.currentTarget.getBoundingClientRect();
+                                    const pos = ((e.clientX - rect.left) / rect.width) * 100;
+                                    setVideoProgress(Math.min(100, Math.max(0, pos)));
+                                  }}
+                                >
+                                  <div style={{ width: `${videoProgress}%`, height: '100%', background: 'var(--accent-primary)', borderRadius: '2px' }}></div>
+                                </div>
+
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.72rem', color: 'var(--text-secondary)' }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                    <button
+                                      type="button"
+                                      onClick={() => setIsPlayingVideo(!isPlayingVideo)}
+                                      style={{ background: 'none', border: 'none', color: '#ffffff', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                                    >
+                                      {isPlayingVideo ? <Pause size={14} /> : <Play size={14} />}
+                                    </button>
+                                    <span>{Math.floor((videoProgress / 100) * 135 / 60)}:{(Math.floor((videoProgress / 100) * 135) % 60).toString().padStart(2, '0')} / 02:15</span>
+                                  </div>
+
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                                    <span style={{ color: 'var(--color-success)', fontSize: '0.68rem' }}>● 시연 MP4 스트리밍 중</span>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        const el = document.getElementById('demo-sandbox-frame');
+                                        if (el && el.requestFullscreen) el.requestFullscreen();
+                                      }}
+                                      style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                                      title="전체 화면"
+                                    >
+                                      <Maximize2 size={13} />
+                                    </button>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
 
+                    {/* Hyperlinks section */}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                       <h4 style={{ fontSize: '0.9rem' }}>과제 증빙용 하이퍼링크</h4>
                       <div style={{ fontSize: '0.8rem' }}>
