@@ -105,6 +105,22 @@ export default function App() {
   const [revFilterSpecialty, setRevFilterSpecialty] = useState<string>('all');
   const [revFilterType, setRevFilterType] = useState<string>('all');
 
+  // System Guide Video Modal State
+  const [showVideoGuideModal, setShowVideoGuideModal] = useState(false);
+  const [videoGuideScene, setVideoGuideScene] = useState(0);
+  const [isVideoGuidePlaying, setIsVideoGuidePlaying] = useState(false);
+
+  const speakGuideSubtitle = (text: string) => {
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+      const cleanText = text.replace(/\[나레이션\]\s*/, '');
+      const utterance = new SpeechSynthesisUtterance(cleanText);
+      utterance.lang = 'ko-KR';
+      utterance.rate = 1.0;
+      window.speechSynthesis.speak(utterance);
+    }
+  };
+
   const handleLogin = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     setLoginError('');
@@ -1187,6 +1203,138 @@ export default function App() {
     );
   };
 
+  const VIDEO_GUIDE_SCENES = [
+    {
+      title: 'Scene 1. AICA 시스템 소개 & 6개 관계사 통합 자격검정',
+      badge: '시스템 개요',
+      subtitle: '[나레이션] 안녕하세요. AICA 그룹 통합 AI 역량 자격심사 시스템 안내 영상입니다. 본 시스템은 에이텍 그룹 6개 관계사의 AI 역량(Level 3 & 4) 자격 검정을 통일된 기준과 공정한 심사 절차로 운영하는 원스톱 디지털 플랫폼입니다.',
+      content: (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1.25rem' }}>
+          <h3 style={{ fontSize: '1.3rem', color: '#ffffff', fontWeight: 'bold' }}>AICA 그룹 통합 AI 역량 자격심사 시스템</h3>
+          <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', maxWidth: '700px', textAlign: 'center', lineHeight: 1.6 }}>
+            에이텍, 에이텍모빌리티, 에이텍씨앤, 에이텍시스템, 에이텍오토, 에이텍컴퓨터 등 6개 관계사의 AI 역량을 종합검정합니다.
+          </p>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem', width: '100%', marginTop: '0.5rem' }}>
+            <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '1rem' }}>
+              <h4 style={{ color: 'var(--accent-secondary)', fontSize: '0.9rem', marginBottom: '0.3rem' }}>🏢 6개 관계사 통합</h4>
+              <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>A~F 6개 관계사 피평가자 통합 대기 큐 모니터링</p>
+            </div>
+            <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '1rem' }}>
+              <h4 style={{ color: '#a855f7', fontSize: '0.9rem', marginBottom: '0.3rem' }}>🛡️ 이해상충 자동 방지</h4>
+              <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>피평가자 소속 관계사와 동일 위원은 자동 심사 배제</p>
+            </div>
+            <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '1rem' }}>
+              <h4 style={{ color: '#4ade80', fontSize: '0.9rem', marginBottom: '0.3rem' }}>⚖️ 3인 패널 루브릭</h4>
+              <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>현업·사업성 + AI·기술성 + 보안·거버넌스 3대 분야 채점</p>
+            </div>
+          </div>
+        </div>
+      )
+    },
+    {
+      title: 'Scene 2. 운영간사 모드 - 대기 큐 관리 & 과제 통합 등록·수정·삭제',
+      badge: '운영간사 기능',
+      subtitle: '[나레이션] 운영간사는 대시보드에서 자격심사 전체 대기 큐를 모니터링하고, 신규 평가과제 등록, 배정 패널 수정, 그리고 필요 시 과제 및 관련 채점 데이터를 연쇄 삭제할 수 있습니다.',
+      content: (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1.25rem' }}>
+          <h3 style={{ fontSize: '1.3rem', color: '#ffffff', fontWeight: 'bold' }}>운영간사 대시보드 & 과제 CRUD 및 상태 통계 모달</h3>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem', width: '100%' }}>
+            <div style={{ background: 'rgba(99, 102, 241, 0.08)', border: '1px solid rgba(99, 102, 241, 0.25)', borderRadius: '8px', padding: '1rem' }}>
+              <h4 style={{ color: '#818cf8', fontSize: '0.95rem', marginBottom: '0.5rem' }}>📋 자격심사 전체 큐 & 상태 모달</h4>
+              <ul style={{ fontSize: '0.8rem', color: '#cbd5e1', lineHeight: '1.6', paddingLeft: '1.2rem', textAlign: 'left' }}>
+                <li>전체 / 평가완료 / 평가중 / 대기 상태별 수치 클릭 시 상세 표 오픈</li>
+                <li>관계사(A~F사) 및 Level(3, 4) 필터링 검색 지원</li>
+              </ul>
+            </div>
+            <div style={{ background: 'rgba(239, 68, 68, 0.08)', border: '1px solid rgba(239, 68, 68, 0.25)', borderRadius: '8px', padding: '1rem' }}>
+              <h4 style={{ color: '#fca5a5', fontSize: '0.95rem', marginBottom: '0.5rem' }}>✏️ 과제 수정 & 연쇄 삭제</h4>
+              <ul style={{ fontSize: '0.8rem', color: '#cbd5e1', lineHeight: '1.6', paddingLeft: '1.2rem', textAlign: 'left' }}>
+                <li>과제 내용 및 배정 심사위원 정보 언제든지 수정 가능</li>
+                <li>과제 삭제 시 관련 채점 점수, 보안 체크리스트, 결과 레포트 연쇄 정리</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      )
+    },
+    {
+      title: 'Scene 3. 이해상충 방지 패널 배정 & 외부 전문가 풀 관리',
+      badge: '심사위원 풀',
+      subtitle: '[나레이션] 공정한 평가를 위해 피평가자의 관계사 위원은 자동 배제되며, 최적 패널 자동 추천 버튼으로 1초 만에 위원회가 구성됩니다. 또한 이해상충 제약이 없는 외부 전문가를 추가 등록하여 전체 과제에 배치할 수 있습니다.',
+      content: (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1.25rem' }}>
+          <h3 style={{ fontSize: '1.3rem', color: '#ffffff', fontWeight: 'bold' }}>패널 자동 추천 & 외부 전문가 (사외 자문단) 등록</h3>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem', width: '100%' }}>
+            <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '1rem' }}>
+              <h4 style={{ color: '#38bdf8', fontSize: '0.9rem', marginBottom: '0.3rem' }}>⚡ 최적 패널 추천</h4>
+              <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>이해상충 적격성을 보유한 3개 분야 심사위원을 1-Click 자동 배정</p>
+            </div>
+            <div style={{ background: 'rgba(168, 85, 247, 0.08)', border: '1px solid rgba(168, 85, 247, 0.3)', borderRadius: '8px', padding: '1rem' }}>
+              <h4 style={{ color: '#d8b4fe', fontSize: '0.9rem', marginBottom: '0.3rem' }}>🌐 외부 전문가 등록</h4>
+              <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>학계, 연구원, 사외 자문단 등록 및 A~F사 전체 과제 제약 없이 배정</p>
+            </div>
+            <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '1rem' }}>
+              <h4 style={{ color: '#4ade80', fontSize: '0.9rem', marginBottom: '0.3rem' }}>✏️ 심사위원 정보 수정</h4>
+              <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>심사위원 풀 테이블에서 성명, 이메일, 전문분야, 소속기관 정보 업데이트</p>
+            </div>
+          </div>
+        </div>
+      )
+    },
+    {
+      title: 'Scene 4. 심사위원 모드 - 16:9 미리보기 & 루브릭 채점',
+      badge: '심사위원 평가',
+      subtitle: '[나레이션] 심사위원은 배정된 과제를 월별 일정표와 큐에서 확인하고, 16:9 비율의 시연 샌드박스에서 제출된 동영상을 직접 미리보며 표준 루브릭 점수를 부여합니다.',
+      content: (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1.25rem' }}>
+          <h3 style={{ fontSize: '1.3rem', color: '#ffffff', fontWeight: 'bold' }}>16:9 Demo Sandbox & 루브릭 채점 및 보안 결격 판정</h3>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem', width: '100%' }}>
+            <div style={{ background: 'rgba(56, 189, 248, 0.08)', border: '1px solid rgba(56, 189, 248, 0.25)', borderRadius: '8px', padding: '1rem' }}>
+              <h4 style={{ color: '#38bdf8', fontSize: '0.95rem', marginBottom: '0.5rem' }}>🎬 16:9 비디오 플레이어 연동</h4>
+              <ul style={{ fontSize: '0.8rem', color: '#cbd5e1', lineHeight: '1.6', paddingLeft: '1.2rem', textAlign: 'left' }}>
+                <li>SharePoint Stream 임베드 URL 직접 연동 시연</li>
+                <li>YouTube 및 라이브 웹 시연 전환 플레이어 제공</li>
+                <li>새창 전체화면 영상 감상 기능 제공</li>
+              </ul>
+            </div>
+            <div style={{ background: 'rgba(74, 222, 128, 0.08)', border: '1px solid rgba(74, 222, 128, 0.25)', borderRadius: '8px', padding: '1rem' }}>
+              <h4 style={{ color: '#4ade80', fontSize: '0.95rem', marginBottom: '0.5rem' }}>📝 표준 루브릭 & 편차/결격 검증</h4>
+              <ul style={{ fontSize: '0.8rem', color: '#cbd5e1', lineHeight: '1.6', paddingLeft: '1.2rem', textAlign: 'left' }}>
+                <li>Level 3 & 4 별 표준 가중치(40/30/30) 자동합산</li>
+                <li>타 위원과 15점 이상 점수 편차 시 경고 안내</li>
+                <li>PII/API Key 노출 미준수 시 즉각 결격 처리</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      )
+    },
+    {
+      title: 'Scene 5. 최종 판정 레포트 & Cloud DB 보안 아카이빙',
+      badge: '최종 레포트',
+      subtitle: '[나레이션] 3인 위원회의 채점 점수가 자동 산출되어 평균 80점 이상 시 최종 합격 판정 결과 보고서가 발행되며, 모든 데이터는 Cloud Firestore에 안전하게 보존됩니다.',
+      content: (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1.25rem' }}>
+          <h3 style={{ fontSize: '1.3rem', color: '#ffffff', fontWeight: 'bold' }}>종합 평가 결과 보고서 & 보안 아카이빙</h3>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem', width: '100%' }}>
+            <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '1rem' }}>
+              <h4 style={{ color: 'var(--accent-primary)', fontSize: '0.9rem', marginBottom: '0.3rem' }}>📊 종합 평가 보고서</h4>
+              <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>3인 위원 개별 점수 및 평균 80점 기준 합락(Pass/Fail) 자동 출력</p>
+            </div>
+            <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '1rem' }}>
+              <h4 style={{ color: '#4ade80', fontSize: '0.9rem', marginBottom: '0.3rem' }}>🔒 5대 보안 점검</h4>
+              <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>개인정보 마스킹, 사내 영업비밀 준수 등 보안 이력 결합</p>
+            </div>
+            <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '1rem' }}>
+              <h4 style={{ color: '#a855f7', fontSize: '0.9rem', marginBottom: '0.3rem' }}>☁️ Cloud DB 세션 유지</h4>
+              <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>Firebase Firestore 연동으로 세션 재접속 후에도 데이터 보존</p>
+            </div>
+          </div>
+        </div>
+      )
+    }
+  ];
+
   const adminStats = getAdminStats();
 
   return (
@@ -1201,23 +1349,52 @@ export default function App() {
           <div className="brand-subtitle">AI Certification for ATEC</div>
         </div>
 
-        {isLoggedIn && (
-          <div className="user-controls">
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <span className="role-switcher-badge">
-                <Users size={16} />
-                {currentUser.role === 'admin' ? '운영간사' : `심사위원 (${currentUser.specialty === 'business' ? '현업' : currentUser.specialty === 'tech' ? '기술' : '보안'})`} : <strong>{currentUser.name}</strong>
-              </span>
-              <button 
-                className="btn-secondary" 
-                onClick={handleLogout}
-                style={{ padding: '0.35rem 0.6rem', fontSize: '0.8rem', marginLeft: '0.5rem', background: 'rgba(239, 68, 68, 0.1)', borderColor: 'rgba(239, 68, 68, 0.3)', color: '#fda4af' }}
-              >
-                로그아웃
-              </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+          <button
+            className="btn-secondary"
+            onClick={() => {
+              setShowVideoGuideModal(true);
+              setVideoGuideScene(0);
+            }}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.4rem',
+              background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.25) 0%, rgba(168, 85, 247, 0.25) 100%)',
+              border: '1px solid rgba(168, 85, 247, 0.45)',
+              color: '#ffffff',
+              padding: '0.45rem 0.85rem',
+              fontSize: '0.82rem',
+              borderRadius: '6px',
+              fontWeight: 600,
+              cursor: 'pointer',
+              boxShadow: '0 2px 10px rgba(168, 85, 247, 0.25)',
+              transition: 'all 0.2s ease'
+            }}
+            title="시스템 기능 소개 및 운영간사/심사위원 가이드 동영상 재생"
+          >
+            <Video size={16} color="#d8b4fe" />
+            <span>🎬 시스템 소개 & 사용 가이드 영상</span>
+          </button>
+
+          {isLoggedIn && (
+            <div className="user-controls">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <span className="role-switcher-badge">
+                  <Users size={16} />
+                  {currentUser.role === 'admin' ? '운영간사' : `심사위원 (${currentUser.specialty === 'business' ? '현업' : currentUser.specialty === 'tech' ? '기술' : '보안'})`} : <strong>{currentUser.name}</strong>
+                </span>
+                <button 
+                  className="btn-secondary" 
+                  onClick={handleLogout}
+                  style={{ padding: '0.35rem 0.6rem', fontSize: '0.8rem', marginLeft: '0.5rem', background: 'rgba(239, 68, 68, 0.1)', borderColor: 'rgba(239, 68, 68, 0.3)', color: '#fda4af' }}
+                >
+                  로그아웃
+                </button>
+              </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </header>
 
       {/* ==================== CORE VIEWS ==================== */}
@@ -3803,6 +3980,138 @@ export default function App() {
           </>
         )}
       </main>
+
+      {/* System Guide Video Modal */}
+      {showVideoGuideModal && (
+        <div className="modal-overlay" style={{ zIndex: 1200 }}>
+          <div className="modal-content" style={{ maxWidth: '980px', width: '92%', padding: 0, overflow: 'hidden', background: '#090d16', border: '1px solid var(--accent-primary)', boxShadow: '0 25px 50px -12px rgba(99, 102, 241, 0.4)' }}>
+            
+            {/* Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.85rem 1.25rem', background: 'rgba(15, 23, 42, 0.95)', borderBottom: '1px solid var(--border-color)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Video size={20} color="#c084fc" />
+                <h3 style={{ fontSize: '1.05rem', margin: 0, color: '#ffffff', fontWeight: 'bold' }}>
+                  🎬 AICA 자격심사 시스템 멀티미디어 안내 영상 (System Guide Video)
+                </h3>
+              </div>
+              <button 
+                className="btn-secondary"
+                onClick={() => {
+                  setShowVideoGuideModal(false);
+                  setIsVideoGuidePlaying(false);
+                  if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+                }}
+                style={{ padding: '0.2rem 0.5rem', minWidth: 'auto' }}
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Video Viewport (16:9 Aspect Ratio) */}
+            <div style={{ position: 'relative', width: '100%', aspectRatio: '16/9', background: 'radial-gradient(circle at center, #1e1b4b 0%, #020617 100%)', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', padding: '2rem', overflow: 'hidden' }}>
+              <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', textAlign: 'center' }}>
+                
+                <span className="badge" style={{ background: 'rgba(168, 85, 247, 0.2)', color: '#d8b4fe', border: '1px solid rgba(168, 85, 247, 0.4)', padding: '0.35rem 0.85rem', borderRadius: '20px', fontSize: '0.8rem', fontWeight: 'bold', marginBottom: '1rem' }}>
+                  {VIDEO_GUIDE_SCENES[videoGuideScene].badge}
+                </span>
+
+                <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#ffffff', marginBottom: '1rem', lineHeight: 1.3 }}>
+                  {VIDEO_GUIDE_SCENES[videoGuideScene].title}
+                </h2>
+
+                {VIDEO_GUIDE_SCENES[videoGuideScene].content}
+
+              </div>
+            </div>
+
+            {/* Subtitle Caption Bar */}
+            <div style={{ background: 'rgba(15, 23, 42, 0.95)', borderTop: '1px solid var(--border-color)', padding: '0.75rem 1.25rem', display: 'flex', alignItems: 'center', gap: '0.75rem', minHeight: '56px' }}>
+              <span style={{ fontSize: '1.1rem', color: 'var(--accent-secondary)' }}>🎙️</span>
+              <div style={{ fontSize: '0.88rem', color: '#f1f5f9', fontWeight: 500, flex: 1, lineHeight: 1.4 }}>
+                {VIDEO_GUIDE_SCENES[videoGuideScene].subtitle}
+              </div>
+            </div>
+
+            {/* Control Bar */}
+            <div style={{ background: '#020617', borderTop: '1px solid var(--border-color)', padding: '0.6rem 1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
+              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                <button
+                  className="btn-primary"
+                  onClick={() => {
+                    const newPlayState = !isVideoGuidePlaying;
+                    setIsVideoGuidePlaying(newPlayState);
+                    if (newPlayState) {
+                      speakGuideSubtitle(VIDEO_GUIDE_SCENES[videoGuideScene].subtitle);
+                    } else {
+                      if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+                    }
+                  }}
+                  style={{ padding: '0.4rem 0.85rem', fontSize: '0.8rem', display: 'inline-flex', alignItems: 'center', gap: '0.35rem', background: isVideoGuidePlaying ? '#e11d48' : undefined }}
+                >
+                  {isVideoGuidePlaying ? <Pause size={14} /> : <Play size={14} />}
+                  <span>{isVideoGuidePlaying ? '음성 일시정지' : '음성 나레이션 재생'}</span>
+                </button>
+
+                <button
+                  className="btn-secondary"
+                  onClick={() => {
+                    const prev = Math.max(0, videoGuideScene - 1);
+                    setVideoGuideScene(prev);
+                    if (isVideoGuidePlaying) speakGuideSubtitle(VIDEO_GUIDE_SCENES[prev].subtitle);
+                  }}
+                  disabled={videoGuideScene === 0}
+                  style={{ padding: '0.4rem 0.75rem', fontSize: '0.8rem' }}
+                >
+                  ◀ 이전 씬
+                </button>
+
+                <button
+                  className="btn-secondary"
+                  onClick={() => {
+                    const next = Math.min(VIDEO_GUIDE_SCENES.length - 1, videoGuideScene + 1);
+                    setVideoGuideScene(next);
+                    if (isVideoGuidePlaying) speakGuideSubtitle(VIDEO_GUIDE_SCENES[next].subtitle);
+                  }}
+                  disabled={videoGuideScene === VIDEO_GUIDE_SCENES.length - 1}
+                  style={{ padding: '0.4rem 0.75rem', fontSize: '0.8rem' }}
+                >
+                  다음 씬 ▶
+                </button>
+              </div>
+
+              {/* Scene dots navigation */}
+              <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
+                {VIDEO_GUIDE_SCENES.map((_, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => {
+                      setVideoGuideScene(idx);
+                      if (isVideoGuidePlaying) speakGuideSubtitle(VIDEO_GUIDE_SCENES[idx].subtitle);
+                    }}
+                    style={{
+                      width: '26px',
+                      height: '26px',
+                      borderRadius: '50%',
+                      border: videoGuideScene === idx ? '2px solid var(--accent-primary)' : '1px solid var(--border-color)',
+                      background: videoGuideScene === idx ? 'var(--accent-primary)' : 'rgba(255,255,255,0.05)',
+                      color: 'white',
+                      fontSize: '0.75rem',
+                      fontWeight: 'bold',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}
+                  >
+                    {idx + 1}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+          </div>
+        </div>
+      )}
     </div>
   );
 }
