@@ -95,6 +95,7 @@ export default function App() {
   // Reviewer Management Modal & Registration State
   const [showReviewerMgmtModal, setShowReviewerMgmtModal] = useState(false);
   const [showAddReviewerModal, setShowAddReviewerModal] = useState(false);
+  const [editingReviewerId, setEditingReviewerId] = useState<string | null>(null);
   const [newRevType, setNewRevType] = useState<'internal' | 'external'>('internal');
   const [newRevName, setNewRevName] = useState('');
   const [newRevEmail, setNewRevEmail] = useState('');
@@ -114,7 +115,7 @@ export default function App() {
     }
 
     const matchedUser = usersList.find(
-      u => u.name.trim() === loginId.trim() && u.email.trim() === loginPw.trim()
+      u => !u.isDeleted && u.name.trim() === loginId.trim() && u.email.trim() === loginPw.trim()
     );
 
     if (matchedUser) {
@@ -146,13 +147,17 @@ export default function App() {
 
     // 0. Subscribe to users collection
     const unsubscribeUsers = onSnapshot(collection(db, 'users'), (snapshot) => {
-      if (!snapshot.empty) {
-        const list: User[] = [];
-        snapshot.forEach((doc) => {
-          list.push({ ...doc.data(), id: doc.id } as User);
-        });
-        setUsersList(list);
-      }
+      const cloudUsers: User[] = [];
+      snapshot.forEach((doc) => {
+        cloudUsers.push({ ...doc.data(), id: doc.id } as User);
+      });
+
+      // Merge initialUsers with cloudUsers so initial accounts are NEVER lost!
+      const userMap = new Map<string, User>();
+      initialUsers.forEach(u => userMap.set(u.id, u));
+      cloudUsers.forEach(u => userMap.set(u.id, u));
+
+      setUsersList(Array.from(userMap.values()));
     });
 
     // 1. Subscribe to candidates collection
@@ -446,18 +451,18 @@ export default function App() {
   const handleAutoAssignPanel = (affiliate: string) => {
     // 1. Business reviewer (Prefer external expert or internal non-conflicting reviewer)
     const bizReviewer = usersList.find(
-      u => u.role === 'reviewer' && u.specialty === 'business' && (u.affiliate === 'EXTERNAL' || u.isExternal || u.affiliate !== affiliate)
-    ) || usersList.find(u => u.role === 'reviewer' && u.specialty === 'business');
+      u => !u.isDeleted && u.role === 'reviewer' && u.specialty === 'business' && (u.affiliate === 'EXTERNAL' || u.isExternal || u.affiliate !== affiliate)
+    ) || usersList.find(u => !u.isDeleted && u.role === 'reviewer' && u.specialty === 'business');
     
     // 2. Tech reviewer
     const techReviewer = usersList.find(
-      u => u.role === 'reviewer' && u.specialty === 'tech' && (u.affiliate === 'EXTERNAL' || u.isExternal || u.affiliate !== affiliate)
-    ) || usersList.find(u => u.role === 'reviewer' && u.specialty === 'tech');
+      u => !u.isDeleted && u.role === 'reviewer' && u.specialty === 'tech' && (u.affiliate === 'EXTERNAL' || u.isExternal || u.affiliate !== affiliate)
+    ) || usersList.find(u => !u.isDeleted && u.role === 'reviewer' && u.specialty === 'tech');
 
     // 3. Security reviewer
     const secReviewer = usersList.find(
-      u => u.role === 'reviewer' && u.specialty === 'security' && (u.affiliate === 'EXTERNAL' || u.isExternal || u.affiliate !== affiliate)
-    ) || usersList.find(u => u.role === 'reviewer' && u.specialty === 'security');
+      u => !u.isDeleted && u.role === 'reviewer' && u.specialty === 'security' && (u.affiliate === 'EXTERNAL' || u.isExternal || u.affiliate !== affiliate)
+    ) || usersList.find(u => !u.isDeleted && u.role === 'reviewer' && u.specialty === 'security');
 
     if (bizReviewer) setNewReviewer1(bizReviewer.id);
     if (techReviewer) setNewReviewer2(techReviewer.id);
@@ -466,6 +471,7 @@ export default function App() {
 
   // Reviewer Management Form Handlers
   const resetAddReviewerForm = () => {
+    setEditingReviewerId(null);
     setNewRevType('internal');
     setNewRevName('');
     setNewRevEmail('');
@@ -474,18 +480,63 @@ export default function App() {
     setNewRevDept('');
   };
 
+  const handleOpenEditReviewer = (rev: User) => {
+    setEditingReviewerId(rev.id);
+    const isExt = rev.affiliate === 'EXTERNAL' || rev.isExternal;
+    setNewRevType(isExt ? 'external' : 'internal');
+    setNewRevName(rev.name);
+    setNewRevEmail(rev.email);
+    setNewRevSpecialty(rev.specialty || 'tech');
+    setNewRevAffiliate(rev.affiliate !== 'EXTERNAL' ? rev.affiliate : 'A');
+    setNewRevDept(rev.dept);
+    setShowAddReviewerModal(true);
+  };
+
   const handleRegisterReviewer = () => {
     if (!newRevName.trim() || !newRevEmail.trim()) {
       alert('심사위원 성명과 이메일을 입력해 주세요.');
       return;
     }
 
-    if (usersList.some(u => u.email.trim().toLowerCase() === newRevEmail.trim().toLowerCase())) {
+    if (usersList.some(u => !u.isDeleted && u.id !== editingReviewerId && u.email.trim().toLowerCase() === newRevEmail.trim().toLowerCase())) {
       alert('이미 등록된 이메일 주소입니다. 다른 이메일을 입력해 주세요.');
       return;
     }
 
     const isExternal = newRevType === 'external';
+
+    if (editingReviewerId) {
+      // EDIT EXISTING REVIEWER
+      const targetRev = usersList.find(u => u.id === editingReviewerId);
+      const updatedReviewer: User = {
+        id: editingReviewerId,
+        name: newRevName.trim(),
+        email: newRevEmail.trim(),
+        role: targetRev?.role || 'reviewer',
+        affiliate: isExternal ? 'EXTERNAL' : newRevAffiliate,
+        dept: newRevDept.trim() || (isExternal ? '외부 AI 전문가 자문단' : '현업 부서'),
+        specialty: newRevSpecialty,
+        isExternal: isExternal,
+        isDeleted: false
+      };
+
+      setUsersList(prev => prev.map(u => u.id === editingReviewerId ? updatedReviewer : u));
+
+      if (isFirebaseConfigured && db) {
+        try {
+          setDoc(doc(db, 'users', editingReviewerId), updatedReviewer);
+        } catch (e) {
+          console.error('Error updating reviewer in Firestore:', e);
+        }
+      }
+
+      resetAddReviewerForm();
+      setShowAddReviewerModal(false);
+      alert(`[${updatedReviewer.name}] 심사위원 정보가 성공적으로 수정되었습니다.`);
+      return;
+    }
+
+    // REGISTER NEW REVIEWER
     const newRevId = `rev_${Date.now()}`;
 
     const newReviewer: User = {
@@ -496,7 +547,8 @@ export default function App() {
       affiliate: isExternal ? 'EXTERNAL' : newRevAffiliate,
       dept: newRevDept.trim() || (isExternal ? '외부 AI 전문가 자문단' : '현업 부서'),
       specialty: newRevSpecialty,
-      isExternal: isExternal
+      isExternal: isExternal,
+      isDeleted: false
     };
 
     const updatedUsers = [...usersList, newReviewer];
@@ -520,13 +572,18 @@ export default function App() {
       return;
     }
 
-    setUsersList(prev => prev.filter(u => u.id !== rev.id));
+    const deletedReviewer: User = {
+      ...rev,
+      isDeleted: true
+    };
+
+    setUsersList(prev => prev.map(u => u.id === rev.id ? deletedReviewer : u));
 
     if (isFirebaseConfigured && db) {
       try {
-        deleteDoc(doc(db, 'users', rev.id));
+        setDoc(doc(db, 'users', rev.id), deletedReviewer);
       } catch (e) {
-        console.error('Error deleting reviewer from Firestore:', e);
+        console.error('Error deleting reviewer in Firestore:', e);
       }
     }
 
@@ -1218,22 +1275,22 @@ export default function App() {
                   {showHint && (
                     <div className="hint-list">
                       <div style={{ fontWeight: 'bold', color: 'white', marginBottom: '0.25rem', fontSize: '0.75rem' }}>[운영간사 계정]</div>
-                      {usersList.filter(u => u.role === 'admin').map(u => (
+                      {usersList.filter(u => !u.isDeleted && u.role === 'admin').map(u => (
                         <div className="hint-item" key={u.id}><span>{u.name} ({u.dept})</span> <code style={{ color: 'var(--accent-secondary)' }}>{u.email}</code></div>
                       ))}
                       
                       <div style={{ fontWeight: 'bold', color: 'white', marginTop: '0.5rem', marginBottom: '0.25rem', fontSize: '0.75rem' }}>[현업·사업성 심사위원]</div>
-                      {usersList.filter(u => u.role === 'reviewer' && u.specialty === 'business').map(u => (
+                      {usersList.filter(u => !u.isDeleted && u.role === 'reviewer' && u.specialty === 'business').map(u => (
                         <div className="hint-item" key={u.id}><span>{u.name} ({u.dept}{u.affiliate === 'EXTERNAL' || u.isExternal ? ' · 🌐외부' : ''})</span> <code style={{ color: 'var(--accent-secondary)' }}>{u.email}</code></div>
                       ))}
                       
                       <div style={{ fontWeight: 'bold', color: 'white', marginTop: '0.5rem', marginBottom: '0.25rem', fontSize: '0.75rem' }}>[AI·기술 심사위원]</div>
-                      {usersList.filter(u => u.role === 'reviewer' && u.specialty === 'tech').map(u => (
+                      {usersList.filter(u => !u.isDeleted && u.role === 'reviewer' && u.specialty === 'tech').map(u => (
                         <div className="hint-item" key={u.id}><span>{u.name} ({u.dept}{u.affiliate === 'EXTERNAL' || u.isExternal ? ' · 🌐외부' : ''})</span> <code style={{ color: 'var(--accent-secondary)' }}>{u.email}</code></div>
                       ))}
                       
                       <div style={{ fontWeight: 'bold', color: 'white', marginTop: '0.5rem', marginBottom: '0.25rem', fontSize: '0.75rem' }}>[보안·거버넌스 심사위원]</div>
-                      {usersList.filter(u => u.role === 'reviewer' && u.specialty === 'security').map(u => (
+                      {usersList.filter(u => !u.isDeleted && u.role === 'reviewer' && u.specialty === 'security').map(u => (
                         <div className="hint-item" key={u.id}><span>{u.name} ({u.dept}{u.affiliate === 'EXTERNAL' || u.isExternal ? ' · 🌐외부' : ''})</span> <code style={{ color: 'var(--accent-secondary)' }}>{u.email}</code></div>
                       ))}
                     </div>
@@ -1967,7 +2024,7 @@ export default function App() {
                           onChange={(e) => setNewReviewer1(e.target.value)}
                         >
                           <option value="">-- 선택 --</option>
-                          {usersList.filter(u => u.role === 'reviewer' && u.specialty === 'business').map(u => {
+                          {usersList.filter(u => !u.isDeleted && u.role === 'reviewer' && u.specialty === 'business').map(u => {
                             const isExternal = u.affiliate === 'EXTERNAL' || u.isExternal;
                             const isConflict = !isExternal && u.affiliate === newCandAffiliate;
                             const affName = isExternal ? '🌐 외부전문가' : (AFFILIATES.find(a => a.code === u.affiliate)?.name || u.affiliate);
@@ -1987,7 +2044,7 @@ export default function App() {
                           onChange={(e) => setNewReviewer2(e.target.value)}
                         >
                           <option value="">-- 선택 --</option>
-                          {usersList.filter(u => u.role === 'reviewer' && u.specialty === 'tech').map(u => {
+                          {usersList.filter(u => !u.isDeleted && u.role === 'reviewer' && u.specialty === 'tech').map(u => {
                             const isExternal = u.affiliate === 'EXTERNAL' || u.isExternal;
                             const isConflict = !isExternal && u.affiliate === newCandAffiliate;
                             const affName = isExternal ? '🌐 외부전문가' : (AFFILIATES.find(a => a.code === u.affiliate)?.name || u.affiliate);
@@ -2008,7 +2065,7 @@ export default function App() {
                         onChange={(e) => setNewReviewer3(e.target.value)}
                       >
                         <option value="">-- 선택 --</option>
-                        {usersList.filter(u => u.role === 'reviewer' && u.specialty === 'security').map(u => {
+                        {usersList.filter(u => !u.isDeleted && u.role === 'reviewer' && u.specialty === 'security').map(u => {
                           const isExternal = u.affiliate === 'EXTERNAL' || u.isExternal;
                           const isConflict = !isExternal && u.affiliate === newCandAffiliate;
                           const affName = isExternal ? '🌐 외부전문가' : (AFFILIATES.find(a => a.code === u.affiliate)?.name || u.affiliate);
@@ -2127,7 +2184,7 @@ export default function App() {
                       </thead>
                       <tbody>
                         {usersList
-                          .filter(u => u.role === 'reviewer')
+                          .filter(u => !u.isDeleted && u.role === 'reviewer')
                           .filter(u => revFilterSpecialty === 'all' || u.specialty === revFilterSpecialty)
                           .filter(u => {
                             if (revFilterType === 'external') return u.affiliate === 'EXTERNAL' || u.isExternal;
@@ -2172,14 +2229,24 @@ export default function App() {
                                   )}
                                 </td>
                                 <td>
-                                  <button
-                                    className="btn-secondary"
-                                    style={{ padding: '0.2rem 0.45rem', fontSize: '0.72rem', background: 'rgba(239, 68, 68, 0.15)', border: '1px solid rgba(239, 68, 68, 0.35)', color: '#fca5a5' }}
-                                    onClick={() => handleDeleteReviewer(rev)}
-                                    title="심사위원 삭제"
-                                  >
-                                    <Trash2 size={11} color="#fca5a5" /> 삭제
-                                  </button>
+                                  <div style={{ display: 'flex', gap: '0.25rem', alignItems: 'center' }}>
+                                    <button
+                                      className="btn-secondary"
+                                      style={{ padding: '0.2rem 0.45rem', fontSize: '0.72rem', display: 'inline-flex', alignItems: 'center', gap: '0.2rem' }}
+                                      onClick={() => handleOpenEditReviewer(rev)}
+                                      title="심사위원 정보 수정"
+                                    >
+                                      <Edit size={11} /> 수정
+                                    </button>
+                                    <button
+                                      className="btn-secondary"
+                                      style={{ padding: '0.2rem 0.45rem', fontSize: '0.72rem', background: 'rgba(239, 68, 68, 0.15)', border: '1px solid rgba(239, 68, 68, 0.35)', color: '#fca5a5', display: 'inline-flex', alignItems: 'center', gap: '0.2rem' }}
+                                      onClick={() => handleDeleteReviewer(rev)}
+                                      title="심사위원 삭제"
+                                    >
+                                      <Trash2 size={11} color="#fca5a5" /> 삭제
+                                    </button>
+                                  </div>
                                 </td>
                               </tr>
                             );
@@ -2201,14 +2268,14 @@ export default function App() {
               </div>
             )}
 
-            {/* Add Reviewer Modal */}
+            {/* Add / Edit Reviewer Modal */}
             {showAddReviewerModal && (
               <div className="modal-overlay" style={{ zIndex: 1100 }}>
                 <div className="modal-content" style={{ maxWidth: '620px', width: '90%' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.75rem', marginBottom: '1.25rem' }}>
                     <h3 style={{ fontSize: '1.15rem', color: 'var(--accent-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem', margin: 0 }}>
                       <UserPlus size={20} />
-                      신규 심사위원 등록 (내부 임직원 / 외부 전문가)
+                      {editingReviewerId ? '심사위원 정보 수정' : '신규 심사위원 등록 (내부 임직원 / 외부 전문가)'}
                     </h3>
                     <button 
                       className="btn-secondary" 
@@ -2371,7 +2438,7 @@ export default function App() {
                       onClick={handleRegisterReviewer}
                     >
                       <UserPlus size={16} />
-                      {newRevType === 'external' ? '🌐 외부 전문가 심사위원 등록' : '🏢 내부 심사위원 등록'}
+                      {editingReviewerId ? '💾 심사위원 정보 수정 완료' : newRevType === 'external' ? '🌐 외부 전문가 심사위원 등록' : '🏢 내부 심사위원 등록'}
                     </button>
                   </div>
                 </div>

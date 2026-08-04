@@ -8,6 +8,7 @@ export interface User {
   dept: string;
   specialty?: 'business' | 'tech' | 'security';
   isExternal?: boolean;
+  isDeleted?: boolean;
 }
 
 export interface Candidate {
