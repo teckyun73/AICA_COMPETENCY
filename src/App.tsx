@@ -1312,14 +1312,14 @@ export default function App() {
     {
       title: 'Scene 5. 최종 판정 레포트 & Cloud DB 보안 아카이빙',
       badge: '최종 레포트',
-      subtitle: '[나레이션] 3인 위원회의 채점 점수가 자동 산출되어 평균 80점 이상 시 최종 합격 판정 결과 보고서가 발행되며, 모든 데이터는 Cloud Firestore에 안전하게 보존됩니다.',
+      subtitle: '[나레이션] 3인 위원회의 채점 점수가 자동 산출되어 평균 70점 이상 시 최종 합격 판정 결과 보고서가 발행되며, 모든 데이터는 Cloud Firestore에 안전하게 보존됩니다.',
       content: (
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1.25rem' }}>
           <h3 style={{ fontSize: '1.3rem', color: '#ffffff', fontWeight: 'bold' }}>종합 평가 결과 보고서 & 보안 아카이빙</h3>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem', width: '100%' }}>
             <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '1rem' }}>
               <h4 style={{ color: 'var(--accent-primary)', fontSize: '0.9rem', marginBottom: '0.3rem' }}>📊 종합 평가 보고서</h4>
-              <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>3인 위원 개별 점수 및 평균 80점 기준 합락(Pass/Fail) 자동 출력</p>
+              <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>3인 위원 개별 점수 및 평균 70점 기준 합격(Pass/Fail) 자동 출력</p>
             </div>
             <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid var(--border-color)', borderRadius: '8px', padding: '1rem' }}>
               <h4 style={{ color: '#4ade80', fontSize: '0.9rem', marginBottom: '0.3rem' }}>🔒 5대 보안 점검</h4>
