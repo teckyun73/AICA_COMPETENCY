@@ -25,7 +25,10 @@ import {
   RefreshCw,
   Monitor,
   Edit,
-  Trash2
+  Trash2,
+  UserPlus,
+  Globe,
+  Building
 } from 'lucide-react';
 import { 
   users as initialUsers, 
@@ -80,6 +83,27 @@ export default function App() {
   const [simLoading, setSimLoading] = useState(false);
   const [simResult, setSimResult] = useState<string | null>(null);
 
+  // Data State (Simulating Local Database)
+  const [usersList, setUsersList] = useState<User[]>(initialUsers);
+  const [candidatesList, setCandidatesList] = useState<Candidate[]>(initialCandidates);
+  const [submissionsList, setSubmissionsList] = useState<Submission[]>(initialSubmissions);
+  const [committeesList, setCommitteesList] = useState<Committee[]>(initialCommittees);
+  const [securityChecks, setSecurityChecks] = useState<SecurityCheck[]>(mockSecurityChecks);
+  const [scoresList, setScoresList] = useState<Score[]>(mockScores);
+  const [evaluationResults, setEvaluationResults] = useState<EvaluationResult[]>(mockEvaluationResults);
+
+  // Reviewer Management Modal & Registration State
+  const [showReviewerMgmtModal, setShowReviewerMgmtModal] = useState(false);
+  const [showAddReviewerModal, setShowAddReviewerModal] = useState(false);
+  const [newRevType, setNewRevType] = useState<'internal' | 'external'>('internal');
+  const [newRevName, setNewRevName] = useState('');
+  const [newRevEmail, setNewRevEmail] = useState('');
+  const [newRevSpecialty, setNewRevSpecialty] = useState<'business' | 'tech' | 'security'>('tech');
+  const [newRevAffiliate, setNewRevAffiliate] = useState('A');
+  const [newRevDept, setNewRevDept] = useState('');
+  const [revFilterSpecialty, setRevFilterSpecialty] = useState<string>('all');
+  const [revFilterType, setRevFilterType] = useState<string>('all');
+
   const handleLogin = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     setLoginError('');
@@ -89,7 +113,7 @@ export default function App() {
       return;
     }
 
-    const matchedUser = initialUsers.find(
+    const matchedUser = usersList.find(
       u => u.name.trim() === loginId.trim() && u.email.trim() === loginPw.trim()
     );
 
@@ -112,14 +136,6 @@ export default function App() {
     setIsLoggedIn(false);
     setSelectedCandidate(null);
   };
-  
-  // Data State (Simulating Local Database)
-  const [candidatesList, setCandidatesList] = useState<Candidate[]>(initialCandidates);
-  const [submissionsList, setSubmissionsList] = useState<Submission[]>(initialSubmissions);
-  const [committeesList, setCommitteesList] = useState<Committee[]>(initialCommittees);
-  const [securityChecks, setSecurityChecks] = useState<SecurityCheck[]>(mockSecurityChecks);
-  const [scoresList, setScoresList] = useState<Score[]>(mockScores);
-  const [evaluationResults, setEvaluationResults] = useState<EvaluationResult[]>(mockEvaluationResults);
 
   // Load data from Firebase if configured, otherwise fallback to local seed data
   useEffect(() => {
@@ -128,7 +144,16 @@ export default function App() {
       return;
     }
 
-    console.log('Firebase VITE env config detected. Connecting to Cloud Firestore...');
+    // 0. Subscribe to users collection
+    const unsubscribeUsers = onSnapshot(collection(db, 'users'), (snapshot) => {
+      if (!snapshot.empty) {
+        const list: User[] = [];
+        snapshot.forEach((doc) => {
+          list.push({ ...doc.data(), id: doc.id } as User);
+        });
+        setUsersList(list);
+      }
+    });
 
     // 1. Subscribe to candidates collection
     const unsubscribeCandidates = onSnapshot(collection(db, 'candidates'), (snapshot) => {
@@ -185,6 +210,7 @@ export default function App() {
     });
 
     return () => {
+      unsubscribeUsers();
       unsubscribeCandidates();
       unsubscribeSubmissions();
       unsubscribeCommittees();
@@ -418,24 +444,93 @@ export default function App() {
 
   // Auto Panel Assign logic (Conflict of Interest Prevention)
   const handleAutoAssignPanel = (affiliate: string) => {
-    // 1. Business reviewer
-    const bizReviewer = initialUsers.find(
-      u => u.role === 'reviewer' && u.specialty === 'business' && u.affiliate !== affiliate
-    ) || initialUsers.find(u => u.role === 'reviewer' && u.specialty === 'business');
+    // 1. Business reviewer (Prefer external expert or internal non-conflicting reviewer)
+    const bizReviewer = usersList.find(
+      u => u.role === 'reviewer' && u.specialty === 'business' && (u.affiliate === 'EXTERNAL' || u.isExternal || u.affiliate !== affiliate)
+    ) || usersList.find(u => u.role === 'reviewer' && u.specialty === 'business');
     
     // 2. Tech reviewer
-    const techReviewer = initialUsers.find(
-      u => u.role === 'reviewer' && u.specialty === 'tech' && u.affiliate !== affiliate
-    ) || initialUsers.find(u => u.role === 'reviewer' && u.specialty === 'tech');
+    const techReviewer = usersList.find(
+      u => u.role === 'reviewer' && u.specialty === 'tech' && (u.affiliate === 'EXTERNAL' || u.isExternal || u.affiliate !== affiliate)
+    ) || usersList.find(u => u.role === 'reviewer' && u.specialty === 'tech');
 
     // 3. Security reviewer
-    const secReviewer = initialUsers.find(
-      u => u.role === 'reviewer' && u.specialty === 'security' && u.affiliate !== affiliate
-    ) || initialUsers.find(u => u.role === 'reviewer' && u.specialty === 'security');
+    const secReviewer = usersList.find(
+      u => u.role === 'reviewer' && u.specialty === 'security' && (u.affiliate === 'EXTERNAL' || u.isExternal || u.affiliate !== affiliate)
+    ) || usersList.find(u => u.role === 'reviewer' && u.specialty === 'security');
 
     if (bizReviewer) setNewReviewer1(bizReviewer.id);
     if (techReviewer) setNewReviewer2(techReviewer.id);
     if (secReviewer) setNewReviewer3(secReviewer.id);
+  };
+
+  // Reviewer Management Form Handlers
+  const resetAddReviewerForm = () => {
+    setNewRevType('internal');
+    setNewRevName('');
+    setNewRevEmail('');
+    setNewRevSpecialty('tech');
+    setNewRevAffiliate('A');
+    setNewRevDept('');
+  };
+
+  const handleRegisterReviewer = () => {
+    if (!newRevName.trim() || !newRevEmail.trim()) {
+      alert('심사위원 성명과 이메일을 입력해 주세요.');
+      return;
+    }
+
+    if (usersList.some(u => u.email.trim().toLowerCase() === newRevEmail.trim().toLowerCase())) {
+      alert('이미 등록된 이메일 주소입니다. 다른 이메일을 입력해 주세요.');
+      return;
+    }
+
+    const isExternal = newRevType === 'external';
+    const newRevId = `rev_${Date.now()}`;
+
+    const newReviewer: User = {
+      id: newRevId,
+      name: newRevName.trim(),
+      email: newRevEmail.trim(),
+      role: 'reviewer',
+      affiliate: isExternal ? 'EXTERNAL' : newRevAffiliate,
+      dept: newRevDept.trim() || (isExternal ? '외부 AI 전문가 자문단' : '현업 부서'),
+      specialty: newRevSpecialty,
+      isExternal: isExternal
+    };
+
+    const updatedUsers = [...usersList, newReviewer];
+    setUsersList(updatedUsers);
+
+    if (isFirebaseConfigured && db) {
+      try {
+        setDoc(doc(db, 'users', newRevId), newReviewer);
+      } catch (e) {
+        console.error('Error saving new reviewer to Firestore:', e);
+      }
+    }
+
+    resetAddReviewerForm();
+    setShowAddReviewerModal(false);
+    alert(`[${newReviewer.name}] (${isExternal ? '외부 전문가' : '내부 임직원'}) 심사위원이 성공적으로 추가 등록되었습니다.\n\n로그인 정보:\n• 성명(ID): ${newReviewer.name}\n• 이메일(비밀번호): ${newReviewer.email}\n• 전문분야: ${newReviewer.specialty === 'business' ? '현업·사업성' : newReviewer.specialty === 'tech' ? 'AI·기술성' : '보안·거버넌스'}`);
+  };
+
+  const handleDeleteReviewer = (rev: User) => {
+    if (!window.confirm(`[${rev.name}] (${rev.dept}) 심사위원을 심사위원 풀에서 삭제하시겠습니까?\n\n※ 삭제 후에는 해당 계정으로 로그인할 수 없게 됩니다.`)) {
+      return;
+    }
+
+    setUsersList(prev => prev.filter(u => u.id !== rev.id));
+
+    if (isFirebaseConfigured && db) {
+      try {
+        deleteDoc(doc(db, 'users', rev.id));
+      } catch (e) {
+        console.error('Error deleting reviewer from Firestore:', e);
+      }
+    }
+
+    alert(`[${rev.name}] 심사위원이 정상적으로 삭제되었습니다.`);
   };
 
   useEffect(() => {
@@ -748,7 +843,7 @@ export default function App() {
     return scoresList
       .filter(s => s.committeeId === currentCommittee.id && s.reviewerId !== currentUser.id)
       .map(s => {
-        const rev = initialUsers.find(u => u.id === s.reviewerId);
+        const rev = usersList.find(u => u.id === s.reviewerId);
         return {
           name: rev?.name || '심사위원',
           specialty: rev?.specialty || 'tech',
@@ -873,7 +968,7 @@ export default function App() {
           ? '보안 가이드라인 미준수 및 중대한 결격사유(지식재산권, 표절 등)에 기인하여 불합격으로 판정함.' 
           : `심사위원 3인의 루브릭 종합 채점 결과, 평균 ${average}점으로 최종 ${passStatus} 판정을 내립니다.`,
         reviewerScores: allScoresForCom.map(s => {
-          const u = initialUsers.find(x => x.id === s.reviewerId);
+          const u = usersList.find(x => x.id === s.reviewerId);
           return {
             reviewerId: s.reviewerId,
             reviewerName: u?.name || '심사위원',
@@ -1123,23 +1218,23 @@ export default function App() {
                   {showHint && (
                     <div className="hint-list">
                       <div style={{ fontWeight: 'bold', color: 'white', marginBottom: '0.25rem', fontSize: '0.75rem' }}>[운영간사 계정]</div>
-                      {initialUsers.filter(u => u.role === 'admin').map(u => (
+                      {usersList.filter(u => u.role === 'admin').map(u => (
                         <div className="hint-item" key={u.id}><span>{u.name} ({u.dept})</span> <code style={{ color: 'var(--accent-secondary)' }}>{u.email}</code></div>
                       ))}
                       
                       <div style={{ fontWeight: 'bold', color: 'white', marginTop: '0.5rem', marginBottom: '0.25rem', fontSize: '0.75rem' }}>[현업·사업성 심사위원]</div>
-                      {initialUsers.filter(u => u.role === 'reviewer' && u.specialty === 'business').map(u => (
-                        <div className="hint-item" key={u.id}><span>{u.name} ({u.dept})</span> <code style={{ color: 'var(--accent-secondary)' }}>{u.email}</code></div>
+                      {usersList.filter(u => u.role === 'reviewer' && u.specialty === 'business').map(u => (
+                        <div className="hint-item" key={u.id}><span>{u.name} ({u.dept}{u.affiliate === 'EXTERNAL' || u.isExternal ? ' · 🌐외부' : ''})</span> <code style={{ color: 'var(--accent-secondary)' }}>{u.email}</code></div>
                       ))}
                       
                       <div style={{ fontWeight: 'bold', color: 'white', marginTop: '0.5rem', marginBottom: '0.25rem', fontSize: '0.75rem' }}>[AI·기술 심사위원]</div>
-                      {initialUsers.filter(u => u.role === 'reviewer' && u.specialty === 'tech').map(u => (
-                        <div className="hint-item" key={u.id}><span>{u.name} ({u.dept})</span> <code style={{ color: 'var(--accent-secondary)' }}>{u.email}</code></div>
+                      {usersList.filter(u => u.role === 'reviewer' && u.specialty === 'tech').map(u => (
+                        <div className="hint-item" key={u.id}><span>{u.name} ({u.dept}{u.affiliate === 'EXTERNAL' || u.isExternal ? ' · 🌐외부' : ''})</span> <code style={{ color: 'var(--accent-secondary)' }}>{u.email}</code></div>
                       ))}
                       
                       <div style={{ fontWeight: 'bold', color: 'white', marginTop: '0.5rem', marginBottom: '0.25rem', fontSize: '0.75rem' }}>[보안·거버넌스 심사위원]</div>
-                      {initialUsers.filter(u => u.role === 'reviewer' && u.specialty === 'security').map(u => (
-                        <div className="hint-item" key={u.id}><span>{u.name} ({u.dept})</span> <code style={{ color: 'var(--accent-secondary)' }}>{u.email}</code></div>
+                      {usersList.filter(u => u.role === 'reviewer' && u.specialty === 'security').map(u => (
+                        <div className="hint-item" key={u.id}><span>{u.name} ({u.dept}{u.affiliate === 'EXTERNAL' || u.isExternal ? ' · 🌐외부' : ''})</span> <code style={{ color: 'var(--accent-secondary)' }}>{u.email}</code></div>
                       ))}
                     </div>
                   )}
@@ -1158,6 +1253,29 @@ export default function App() {
                 <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>6개 관계사 통합 AI 역량 자격 검증 현황을 관리합니다.</p>
               </div>
               <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                <button 
+                  className="btn-secondary" 
+                  onClick={() => setShowReviewerMgmtModal(true)}
+                  style={{ 
+                    display: 'inline-flex', 
+                    alignItems: 'center', 
+                    gap: '0.4rem', 
+                    background: 'rgba(168, 85, 247, 0.15)', 
+                    border: '1px solid rgba(168, 85, 247, 0.4)', 
+                    color: '#d8b4fe', 
+                    padding: '0.5rem 0.85rem', 
+                    fontSize: '0.85rem', 
+                    borderRadius: '6px', 
+                    cursor: 'pointer', 
+                    fontWeight: 600,
+                    transition: 'all 0.2s ease'
+                  }}
+                  title="등록된 심사위원 풀 조회 및 신규 심사위원(내부/외부 전문가) 추가 등록"
+                >
+                  <UserPlus size={15} color="#d8b4fe" />
+                  <span>심사위원 풀 관리 & 신규 등록</span>
+                </button>
+
                 <button 
                   className="btn-secondary" 
                   onClick={handleLoadSimulationData}
@@ -1407,9 +1525,9 @@ export default function App() {
                       const comm = committeesList.find(co => co.candidateId === cand.id);
                       const res = evaluationResults.find(er => er.candidateId === cand.id);
                       
-                      const r1 = initialUsers.find(u => u.id === comm?.reviewer1Id);
-                      const r2 = initialUsers.find(u => u.id === comm?.reviewer2Id);
-                      const r3 = initialUsers.find(u => u.id === comm?.reviewer3Id);
+                      const r1 = usersList.find(u => u.id === comm?.reviewer1Id);
+                      const r2 = usersList.find(u => u.id === comm?.reviewer2Id);
+                      const r3 = usersList.find(u => u.id === comm?.reviewer3Id);
 
                       return (
                         <tr key={cand.id}>
@@ -1556,9 +1674,9 @@ export default function App() {
                             const res = evaluationResults.find(er => er.candidateId === cand.id);
                             const sub = submissionsList.find(s => s.candidateId === cand.id);
                             
-                            const r1 = initialUsers.find(u => u.id === comm?.reviewer1Id);
-                            const r2 = initialUsers.find(u => u.id === comm?.reviewer2Id);
-                            const r3 = initialUsers.find(u => u.id === comm?.reviewer3Id);
+                            const r1 = usersList.find(u => u.id === comm?.reviewer1Id);
+                            const r2 = usersList.find(u => u.id === comm?.reviewer2Id);
+                            const r3 = usersList.find(u => u.id === comm?.reviewer3Id);
 
                             return (
                               <tr key={cand.id}>
@@ -1849,12 +1967,13 @@ export default function App() {
                           onChange={(e) => setNewReviewer1(e.target.value)}
                         >
                           <option value="">-- 선택 --</option>
-                          {initialUsers.filter(u => u.role === 'reviewer' && u.specialty === 'business').map(u => {
-                            const isConflict = u.affiliate === newCandAffiliate;
-                            const affName = AFFILIATES.find(a => a.code === u.affiliate)?.name || u.affiliate;
+                          {usersList.filter(u => u.role === 'reviewer' && u.specialty === 'business').map(u => {
+                            const isExternal = u.affiliate === 'EXTERNAL' || u.isExternal;
+                            const isConflict = !isExternal && u.affiliate === newCandAffiliate;
+                            const affName = isExternal ? '🌐 외부전문가' : (AFFILIATES.find(a => a.code === u.affiliate)?.name || u.affiliate);
                             return (
-                              <option key={u.id} value={u.id} style={{ color: isConflict ? '#ef4444' : 'inherit' }}>
-                                {u.name} ({u.dept} - {affName}){isConflict ? ' [이해상충 주의]' : ''}
+                              <option key={u.id} value={u.id} style={{ color: isConflict ? '#ef4444' : isExternal ? '#a855f7' : 'inherit' }}>
+                                {u.name} ({u.dept} - {affName}){isExternal ? ' [외부전문가 · 이해상충없음]' : isConflict ? ' [이해상충 주의]' : ''}
                               </option>
                             );
                           })}
@@ -1868,12 +1987,13 @@ export default function App() {
                           onChange={(e) => setNewReviewer2(e.target.value)}
                         >
                           <option value="">-- 선택 --</option>
-                          {initialUsers.filter(u => u.role === 'reviewer' && u.specialty === 'tech').map(u => {
-                            const isConflict = u.affiliate === newCandAffiliate;
-                            const affName = AFFILIATES.find(a => a.code === u.affiliate)?.name || u.affiliate;
+                          {usersList.filter(u => u.role === 'reviewer' && u.specialty === 'tech').map(u => {
+                            const isExternal = u.affiliate === 'EXTERNAL' || u.isExternal;
+                            const isConflict = !isExternal && u.affiliate === newCandAffiliate;
+                            const affName = isExternal ? '🌐 외부전문가' : (AFFILIATES.find(a => a.code === u.affiliate)?.name || u.affiliate);
                             return (
-                              <option key={u.id} value={u.id} style={{ color: isConflict ? '#ef4444' : 'inherit' }}>
-                                {u.name} ({u.dept} - {affName}){isConflict ? ' [이해상충 주의]' : ''}
+                              <option key={u.id} value={u.id} style={{ color: isConflict ? '#ef4444' : isExternal ? '#a855f7' : 'inherit' }}>
+                                {u.name} ({u.dept} - {affName}){isExternal ? ' [외부전문가 · 이해상충없음]' : isConflict ? ' [이해상충 주의]' : ''}
                               </option>
                             );
                           })}
@@ -1888,12 +2008,13 @@ export default function App() {
                         onChange={(e) => setNewReviewer3(e.target.value)}
                       >
                         <option value="">-- 선택 --</option>
-                        {initialUsers.filter(u => u.role === 'reviewer' && u.specialty === 'security').map(u => {
-                          const isConflict = u.affiliate === newCandAffiliate;
-                          const affName = AFFILIATES.find(a => a.code === u.affiliate)?.name || u.affiliate;
+                        {usersList.filter(u => u.role === 'reviewer' && u.specialty === 'security').map(u => {
+                          const isExternal = u.affiliate === 'EXTERNAL' || u.isExternal;
+                          const isConflict = !isExternal && u.affiliate === newCandAffiliate;
+                          const affName = isExternal ? '🌐 외부전문가' : (AFFILIATES.find(a => a.code === u.affiliate)?.name || u.affiliate);
                           return (
-                            <option key={u.id} value={u.id} style={{ color: isConflict ? '#ef4444' : 'inherit' }}>
-                              {u.name} ({u.dept} - {affName}){isConflict ? ' [이해상충 주의]' : ''}
+                            <option key={u.id} value={u.id} style={{ color: isConflict ? '#ef4444' : isExternal ? '#a855f7' : 'inherit' }}>
+                              {u.name} ({u.dept} - {affName}){isExternal ? ' [외부전문가 · 이해상충없음]' : isConflict ? ' [이해상충 주의]' : ''}
                             </option>
                           );
                         })}
@@ -1920,6 +2041,337 @@ export default function App() {
                       onClick={handleRegisterTask}
                     >
                       {editingCandidateId ? '과제 및 배정 정보 수정 완료' : '과제 등록 및 심사 배정 완료'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Reviewer Management Modal */}
+            {showReviewerMgmtModal && (
+              <div className="modal-overlay">
+                <div className="modal-content" style={{ maxWidth: '960px', width: '90%' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.75rem', marginBottom: '1.25rem' }}>
+                    <h3 style={{ fontSize: '1.2rem', color: 'var(--accent-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem', margin: 0 }}>
+                      <Users size={22} />
+                      AICA 심사위원 풀 관리 및 신규 등록
+                    </h3>
+                    <button 
+                      className="btn-secondary" 
+                      onClick={() => setShowReviewerMgmtModal(false)}
+                      style={{ padding: '0.25rem 0.5rem', minWidth: 'auto' }}
+                    >
+                      ✕
+                    </button>
+                  </div>
+
+                  {/* Info Notice Banner */}
+                  <div style={{ background: 'rgba(59, 130, 246, 0.08)', border: '1px solid rgba(59, 130, 246, 0.25)', borderRadius: '6px', padding: '0.75rem 1rem', marginBottom: '1.25rem', fontSize: '0.82rem', color: '#cbd5e1', lineHeight: '1.5' }}>
+                    💡 <strong>심사위원 풀 운영 안내:</strong> 사내 관계사 소속 위원뿐만 아니라 <strong>회사와 이해상충이 없는 외부 전문가(학계, 연구원, 외부기술자문단)</strong>를 등록하여 자격심사 패널로 즉시 지정할 수 있습니다. 등록된 심사위원은 성명(ID)과 이메일(비밀번호)로 시스템에 개별 로그인하여 평가를 진행합니다.
+                  </div>
+
+                  {/* Action Bar & Filters */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.75rem' }}>
+                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                      <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>전문 분야:</span>
+                      <select
+                        value={revFilterSpecialty}
+                        onChange={(e) => setRevFilterSpecialty(e.target.value)}
+                        style={{ background: 'rgba(255,255,255,0.05)', color: 'white', border: '1px solid var(--border-color)', borderRadius: '4px', padding: '0.25rem 0.5rem', fontSize: '0.8rem' }}
+                      >
+                        <option value="all">전체 분야</option>
+                        <option value="business">💼 현업·사업성</option>
+                        <option value="tech">🤖 AI·기술성</option>
+                        <option value="security">🛡️ 보안·거버넌스</option>
+                      </select>
+
+                      <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginLeft: '0.5rem' }}>구분:</span>
+                      <select
+                        value={revFilterType}
+                        onChange={(e) => setRevFilterType(e.target.value)}
+                        style={{ background: 'rgba(255,255,255,0.05)', color: 'white', border: '1px solid var(--border-color)', borderRadius: '4px', padding: '0.25rem 0.5rem', fontSize: '0.8rem' }}
+                      >
+                        <option value="all">전체 위원</option>
+                        <option value="internal">🏢 내부 임직원</option>
+                        <option value="external">🌐 외부 전문가</option>
+                      </select>
+                    </div>
+
+                    <button
+                      className="btn-primary"
+                      style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.82rem', padding: '0.45rem 0.9rem' }}
+                      onClick={() => {
+                        resetAddReviewerForm();
+                        setShowAddReviewerModal(true);
+                      }}
+                    >
+                      <UserPlus size={16} />
+                      + 신규 심사위원 등록 (내부/외부)
+                    </button>
+                  </div>
+
+                  {/* Reviewer Table */}
+                  <div style={{ maxHeight: '420px', overflowY: 'auto', border: '1px solid var(--border-color)', borderRadius: '6px' }}>
+                    <table style={{ margin: 0 }}>
+                      <thead>
+                        <tr>
+                          <th>전문가 구분</th>
+                          <th>성명</th>
+                          <th>이메일 (로그인 ID/PW)</th>
+                          <th>심사 분야</th>
+                          <th>소속 (관계사/외부기관)</th>
+                          <th>부서 / 직함</th>
+                          <th>이해상충 적격성</th>
+                          <th>관리</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {usersList
+                          .filter(u => u.role === 'reviewer')
+                          .filter(u => revFilterSpecialty === 'all' || u.specialty === revFilterSpecialty)
+                          .filter(u => {
+                            if (revFilterType === 'external') return u.affiliate === 'EXTERNAL' || u.isExternal;
+                            if (revFilterType === 'internal') return u.affiliate !== 'EXTERNAL' && !u.isExternal;
+                            return true;
+                          })
+                          .map(rev => {
+                            const isExt = rev.affiliate === 'EXTERNAL' || rev.isExternal;
+                            const affName = isExt ? '🌐 외부전문가' : (AFFILIATES.find(a => a.code === rev.affiliate)?.name || rev.affiliate);
+                            
+                            return (
+                              <tr key={rev.id}>
+                                <td>
+                                  {isExt ? (
+                                    <span className="badge" style={{ background: 'rgba(168, 85, 247, 0.15)', border: '1px solid rgba(168, 85, 247, 0.4)', color: '#d8b4fe', fontWeight: 'bold' }}>
+                                      🌐 외부 전문가
+                                    </span>
+                                  ) : (
+                                    <span className="badge" style={{ background: 'rgba(59, 130, 246, 0.15)', border: '1px solid rgba(59, 130, 246, 0.4)', color: '#93c5fd' }}>
+                                      🏢 내부 임직원
+                                    </span>
+                                  )}
+                                </td>
+                                <td><strong>{rev.name}</strong></td>
+                                <td style={{ fontFamily: 'monospace', fontSize: '0.78rem', color: 'var(--accent-secondary)' }}>{rev.email}</td>
+                                <td>
+                                  <span className={`badge ${
+                                    rev.specialty === 'business' ? 'badge-specialty-business' :
+                                    rev.specialty === 'tech' ? 'badge-specialty-tech' :
+                                    'badge-specialty-security'
+                                  }`}>
+                                    {rev.specialty === 'business' ? '💼 현업·사업성' : rev.specialty === 'tech' ? '🤖 AI·기술성' : '🛡️ 보안·거버넌스'}
+                                  </span>
+                                </td>
+                                <td>{affName}</td>
+                                <td>{rev.dept}</td>
+                                <td>
+                                  {isExt ? (
+                                    <span style={{ fontSize: '0.72rem', color: '#4ade80', fontWeight: 600 }}>● 전 관계사 배정가능 (이해상충 없음)</span>
+                                  ) : (
+                                    <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>● 자사({rev.affiliate}) 제외 배정</span>
+                                  )}
+                                </td>
+                                <td>
+                                  <button
+                                    className="btn-secondary"
+                                    style={{ padding: '0.2rem 0.45rem', fontSize: '0.72rem', background: 'rgba(239, 68, 68, 0.15)', border: '1px solid rgba(239, 68, 68, 0.35)', color: '#fca5a5' }}
+                                    onClick={() => handleDeleteReviewer(rev)}
+                                    title="심사위원 삭제"
+                                  >
+                                    <Trash2 size={11} color="#fca5a5" /> 삭제
+                                  </button>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '1.25rem' }}>
+                    <button
+                      className="btn-secondary"
+                      onClick={() => setShowReviewerMgmtModal(false)}
+                      style={{ padding: '0.4rem 1.25rem' }}
+                    >
+                      닫기
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Add Reviewer Modal */}
+            {showAddReviewerModal && (
+              <div className="modal-overlay" style={{ zIndex: 1100 }}>
+                <div className="modal-content" style={{ maxWidth: '620px', width: '90%' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.75rem', marginBottom: '1.25rem' }}>
+                    <h3 style={{ fontSize: '1.15rem', color: 'var(--accent-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem', margin: 0 }}>
+                      <UserPlus size={20} />
+                      신규 심사위원 등록 (내부 임직원 / 외부 전문가)
+                    </h3>
+                    <button 
+                      className="btn-secondary" 
+                      onClick={() => {
+                        setShowAddReviewerModal(false);
+                        resetAddReviewerForm();
+                      }}
+                      style={{ padding: '0.25rem 0.5rem', minWidth: 'auto' }}
+                    >
+                      ✕
+                    </button>
+                  </div>
+
+                  {/* Expert Type Selector Segment */}
+                  <div style={{ marginBottom: '1.25rem' }}>
+                    <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 'bold', color: 'var(--text-secondary)', marginBottom: '0.4rem' }}>
+                      전문가 구분 선택 *
+                    </label>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                      <div
+                        onClick={() => setNewRevType('internal')}
+                        style={{
+                          padding: '0.75rem',
+                          borderRadius: '6px',
+                          border: newRevType === 'internal' ? '2px solid var(--accent-primary)' : '1px solid var(--border-color)',
+                          background: newRevType === 'internal' ? 'rgba(99, 102, 241, 0.12)' : 'rgba(255,255,255,0.02)',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.5rem',
+                          transition: 'all 0.2s ease'
+                        }}
+                      >
+                        <Building size={20} color={newRevType === 'internal' ? 'var(--accent-primary)' : '#94a3b8'} />
+                        <div>
+                          <div style={{ fontSize: '0.85rem', fontWeight: 'bold', color: newRevType === 'internal' ? '#ffffff' : '#cbd5e1' }}>
+                            🏢 관계사 내부 임직원
+                          </div>
+                          <div style={{ fontSize: '0.7rem', color: '#94a3b8' }}>그룹 사내 전문가 (A~F 사 소속)</div>
+                        </div>
+                      </div>
+
+                      <div
+                        onClick={() => setNewRevType('external')}
+                        style={{
+                          padding: '0.75rem',
+                          borderRadius: '6px',
+                          border: newRevType === 'external' ? '2px solid #a855f7' : '1px solid var(--border-color)',
+                          background: newRevType === 'external' ? 'rgba(168, 85, 247, 0.15)' : 'rgba(255,255,255,0.02)',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.5rem',
+                          transition: 'all 0.2s ease'
+                        }}
+                      >
+                        <Globe size={20} color={newRevType === 'external' ? '#d8b4fe' : '#94a3b8'} />
+                        <div>
+                          <div style={{ fontSize: '0.85rem', fontWeight: 'bold', color: newRevType === 'external' ? '#ffffff' : '#cbd5e1' }}>
+                            🌐 외부 전문가 (외부 자문단)
+                          </div>
+                          <div style={{ fontSize: '0.7rem', color: '#d8b4fe' }}>학계 / 산학연 / 사외 기술자문</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {newRevType === 'external' && (
+                    <div style={{ background: 'rgba(168, 85, 247, 0.1)', border: '1px solid rgba(168, 85, 247, 0.3)', borderRadius: '6px', padding: '0.6rem 0.85rem', marginBottom: '1.25rem', fontSize: '0.75rem', color: '#e9d5ff' }}>
+                      💡 <strong>외부 전문가 배정 장점:</strong> 외부 전문가는 특정 관계사에 귀속되지 않으므로, 모든 평가 과제(A~F 사 전체)에 이해상충 없이 제약 없이 심사위원으로 추천 및 배정 가능합니다.
+                    </div>
+                  )}
+
+                  {/* Form Controls */}
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label>심사위원 성명 *</label>
+                      <input 
+                        type="text" 
+                        placeholder={newRevType === 'external' ? '예: 김외부' : '예: 홍길동'}
+                        value={newRevName} 
+                        onChange={(e) => setNewRevName(e.target.value)} 
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>이메일 (로그인 ID/비밀번호 겸용) *</label>
+                      <input 
+                        type="email" 
+                        placeholder={newRevType === 'external' ? '예: external.kim@ai-institute.or.kr' : '예: reviewer@atec.kr'}
+                        value={newRevEmail} 
+                        onChange={(e) => setNewRevEmail(e.target.value)} 
+                      />
+                    </div>
+                  </div>
+
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label>심사 전문 분야 (3대 심사 영역) *</label>
+                      <select 
+                        value={newRevSpecialty} 
+                        onChange={(e) => setNewRevSpecialty(e.target.value as any)}
+                      >
+                        <option value="tech">🤖 AI·기술성 (LLM/RAG Engineering, 데이터 파이프라인)</option>
+                        <option value="business">💼 현업·사업성 (비즈니스 가치, ROI, 공정 개선)</option>
+                        <option value="security">🛡️ 보안·거버넌스 (PII 마스킹, 정보보안, 가이드 준수)</option>
+                      </select>
+                    </div>
+
+                    {newRevType === 'internal' ? (
+                      <div className="form-group">
+                        <label>소속 관계사 *</label>
+                        <select 
+                          value={newRevAffiliate} 
+                          onChange={(e) => setNewRevAffiliate(e.target.value)}
+                        >
+                          {AFFILIATES.map(aff => (
+                            <option key={aff.code} value={aff.code}>{aff.name}</option>
+                          ))}
+                        </select>
+                      </div>
+                    ) : (
+                      <div className="form-group">
+                        <label>소속 관계사 구분</label>
+                        <input 
+                          type="text" 
+                          value="EXTERNAL (외부 전문가 - 이해상충 없음)" 
+                          disabled 
+                          style={{ opacity: 0.7, background: 'rgba(255,255,255,0.03)' }}
+                        />
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="form-group">
+                    <label>{newRevType === 'external' ? '소속 기관 / 대학 / 회사명 *' : '소속 부서명 *'}</label>
+                    <input 
+                      type="text" 
+                      placeholder={newRevType === 'external' ? '예: 한국AI학회 / KAIST AI대학원 / ㈜소프트자문단' : '예: 연구소 AI기술팀'}
+                      value={newRevDept} 
+                      onChange={(e) => setNewRevDept(e.target.value)} 
+                    />
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1.5rem', borderTop: '1px solid var(--border-color)', paddingTop: '1rem' }}>
+                    <button 
+                      type="button" 
+                      className="btn-secondary" 
+                      style={{ flex: 1 }}
+                      onClick={() => {
+                        setShowAddReviewerModal(false);
+                        resetAddReviewerForm();
+                      }}
+                    >
+                      취소
+                    </button>
+                    <button 
+                      type="button" 
+                      className="btn-primary" 
+                      style={{ flex: 2, background: newRevType === 'external' ? 'linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%)' : undefined }}
+                      onClick={handleRegisterReviewer}
+                    >
+                      <UserPlus size={16} />
+                      {newRevType === 'external' ? '🌐 외부 전문가 심사위원 등록' : '🏢 내부 심사위원 등록'}
                     </button>
                   </div>
                 </div>

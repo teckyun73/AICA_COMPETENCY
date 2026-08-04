@@ -7,6 +7,7 @@ export interface User {
   affiliate: string;
   dept: string;
   specialty?: 'business' | 'tech' | 'security';
+  isExternal?: boolean;
 }
 
 export interface Candidate {
