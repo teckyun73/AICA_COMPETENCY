@@ -155,10 +155,37 @@ export default function App() {
       // Merge initialUsers with cloudUsers so initial accounts are NEVER lost!
       const userMap = new Map<string, User>();
       initialUsers.forEach(u => userMap.set(u.id, u));
-      cloudUsers.forEach(u => userMap.set(u.id, u));
+      cloudUsers.forEach(u => {
+        if (u.id === 'admin1') {
+          userMap.set('admin1', { ...u, name: '이동운', email: 'dwlee@ateccn.kr' });
+        } else if (u.id === 'admin2') {
+          userMap.set('admin2', { ...u, name: '우창흔', email: 'chwu@ateccn.kr' });
+        } else {
+          userMap.set(u.id, u);
+        }
+      });
 
       setUsersList(Array.from(userMap.values()));
     });
+
+    // Ensure Firestore reflects latest admin credentials
+    setDoc(doc(db, 'users', 'admin1'), {
+      id: 'admin1',
+      name: '이동운',
+      email: 'dwlee@ateccn.kr',
+      role: 'admin',
+      affiliate: 'A',
+      dept: '경영혁신실'
+    }, { merge: true }).catch(console.error);
+
+    setDoc(doc(db, 'users', 'admin2'), {
+      id: 'admin2',
+      name: '우창흔',
+      email: 'chwu@ateccn.kr',
+      role: 'admin',
+      affiliate: 'A',
+      dept: '경영혁신실'
+    }, { merge: true }).catch(console.error);
 
     // 1. Subscribe to candidates collection
     const unsubscribeCandidates = onSnapshot(collection(db, 'candidates'), (snapshot) => {
@@ -235,6 +262,9 @@ export default function App() {
     if (isFirebaseConfigured && db) {
       try {
         console.log('Seeding simulation data to Cloud Firestore...');
+        for (const item of initialUsers) {
+          await setDoc(doc(db, 'users', item.id), item, { merge: true });
+        }
         for (const item of initialCandidates) {
           await setDoc(doc(db, 'candidates', item.id), item);
         }
