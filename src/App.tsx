@@ -316,37 +316,60 @@ export default function App() {
     alert('시뮬레이션 가상 데이터(후보자 9명 및 3인 패널 평가 결과)를 성공적으로 불러왔습니다.');
   };
 
-  // Reset / Clear all evaluation data from Firebase Cloud DB or Local State
+  // Reset / Clear ONLY simulation data from Firebase Cloud DB or Local State (Preserving user-created data)
   const handleResetData = async () => {
     const confirmReset = window.confirm(
-      '⚠️ 전체 평가 데이터를 초기화하시겠습니까?\n\n모든 후보자, 제출 과제, 배정 위원회 및 평가 결과가 초기화되며, 실제 신규 평가과제를 등록하여 실무 운영을 시작할 수 있는 깨끗한 상태가 됩니다.'
+      '⚡ 시뮬레이션 가상 데이터(후보자 9명 및 가상 평가 결과)만 초기화하시겠습니까?\n\n※ 운영간사님이 신규로 직접 등록하거나 작성하신 실제 평가 과제 데이터는 절대 삭제되지 않고 안전하게 보존됩니다.'
     );
     if (!confirmReset) return;
 
+    // Simulation Data ID Sets
+    const simCandIds = new Set(initialCandidates.map(c => c.id));
+    const simSubIds = new Set(initialSubmissions.map(s => s.id));
+    const simCommIds = new Set(initialCommittees.map(c => c.id));
+    const simSecIds = new Set(mockSecurityChecks.map(s => s.id));
+    const simScoreIds = new Set(mockScores.map(s => s.id));
+    const simEvalIds = new Set(mockEvaluationResults.map(r => r.candidateId));
+
     if (isFirebaseConfigured && db) {
       try {
-        console.log('Resetting Cloud Firestore collections...');
-        const collectionsToReset = ['candidates', 'submissions', 'committees', 'securityChecks', 'scores', 'evaluationResults'];
-        for (const colName of collectionsToReset) {
-          const querySnapshot = await getDocs(collection(db, colName));
-          const deletePromises = querySnapshot.docs.map(docSnapshot => deleteDoc(doc(db, colName, docSnapshot.id)));
-          await Promise.all(deletePromises);
+        console.log('Resetting ONLY simulation data in Cloud Firestore...');
+        
+        for (const id of simCandIds) {
+          await deleteDoc(doc(db, 'candidates', id)).catch(() => {});
         }
-        console.log('Cloud Firestore collections successfully reset.');
+        for (const id of simSubIds) {
+          await deleteDoc(doc(db, 'submissions', id)).catch(() => {});
+        }
+        for (const id of simCommIds) {
+          await deleteDoc(doc(db, 'committees', id)).catch(() => {});
+        }
+        for (const id of simSecIds) {
+          await deleteDoc(doc(db, 'securityChecks', id)).catch(() => {});
+        }
+        for (const id of simScoreIds) {
+          await deleteDoc(doc(db, 'scores', id)).catch(() => {});
+        }
+        for (const id of simEvalIds) {
+          await deleteDoc(doc(db, 'evaluationResults', id)).catch(() => {});
+        }
+
+        console.log('Simulation data successfully reset in Cloud Firestore.');
       } catch (error) {
-        console.error('Error resetting Cloud Firestore:', error);
-        alert('Cloud DB 데이터 초기화 중 오류가 발생했습니다: ' + (error as Error).message);
+        console.error('Error resetting simulation data in Cloud Firestore:', error);
+        alert('Cloud DB 시뮬레이션 데이터 초기화 중 오류가 발생했습니다: ' + (error as Error).message);
       }
     }
 
-    setCandidatesList([]);
-    setSubmissionsList([]);
-    setCommitteesList([]);
-    setSecurityChecks([]);
-    setScoresList([]);
-    setEvaluationResults([]);
+    // Preserve user-created data, remove only simulation data
+    setCandidatesList(prev => prev.filter(c => !simCandIds.has(c.id)));
+    setSubmissionsList(prev => prev.filter(s => !simSubIds.has(s.id)));
+    setCommitteesList(prev => prev.filter(c => !simCommIds.has(c.id)));
+    setSecurityChecks(prev => prev.filter(s => !simSecIds.has(s.id)));
+    setScoresList(prev => prev.filter(s => !simScoreIds.has(s.id)));
+    setEvaluationResults(prev => prev.filter(r => !simEvalIds.has(r.candidateId)));
 
-    alert('모든 평가 데이터가 성공적으로 초기화되었습니다.\n우측 상단의 "+ 신규 평가과제 등록 & 패널 배정" 버튼을 눌러 실무 운영을 시작하세요.');
+    alert('시뮬레이션 가상 데이터가 성공적으로 초기화되었습니다.\n\n※ 운영간사님이 신규로 등록/작성하신 실제 평가 과제 데이터는 안전하게 보존되었습니다.');
   };
 
   // Admin Add & Edit Candidate Form State
@@ -1580,10 +1603,10 @@ export default function App() {
                     fontWeight: 600,
                     transition: 'all 0.2s ease'
                   }}
-                  title="모든 평가 과제 및 결과를 초기화하여 신규 실무 운영 상태로 만듭니다."
+                  title="가상 시뮬레이션 데이터만 선택 초기화하며, 신규 작성/등록된 평가 과제는 안전하게 보존합니다."
                 >
                   <RotateCcw size={15} color="#fca5a5" />
-                  <span>데이터 초기화</span>
+                  <span>시뮬레이션 데이터 초기화</span>
                 </button>
 
                 <button 
