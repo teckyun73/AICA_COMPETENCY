@@ -47,7 +47,6 @@ import {
   setDoc, 
   updateDoc, 
   onSnapshot,
-  getDocs,
   deleteDoc
 } from 'firebase/firestore';
 import type { 
