@@ -204,29 +204,41 @@ export default function App() {
 
     // 1. Subscribe to candidates collection
     const unsubscribeCandidates = onSnapshot(collection(db, 'candidates'), (snapshot) => {
-      const list: Candidate[] = [];
+      const cloudCandidates: Candidate[] = [];
       snapshot.forEach((doc) => {
-        list.push({ ...doc.data(), id: doc.id } as Candidate);
+        cloudCandidates.push({ ...doc.data(), id: doc.id } as Candidate);
       });
-      setCandidatesList(list);
+
+      const candMap = new Map<string, Candidate>();
+      initialCandidates.forEach((c: Candidate) => candMap.set(c.id, c));
+      cloudCandidates.forEach((c: Candidate) => candMap.set(c.id, c));
+      setCandidatesList(Array.from(candMap.values()));
     });
 
     // 2. Subscribe to submissions collection
     const unsubscribeSubmissions = onSnapshot(collection(db, 'submissions'), (snapshot) => {
-      const list: Submission[] = [];
+      const cloudSubmissions: Submission[] = [];
       snapshot.forEach((doc) => {
-        list.push({ ...doc.data(), id: doc.id } as Submission);
+        cloudSubmissions.push({ ...doc.data(), id: doc.id } as Submission);
       });
-      setSubmissionsList(list);
+
+      const subMap = new Map<string, Submission>();
+      initialSubmissions.forEach((s: Submission) => subMap.set(s.id, s));
+      cloudSubmissions.forEach((s: Submission) => subMap.set(s.id, s));
+      setSubmissionsList(Array.from(subMap.values()));
     });
 
     // 3. Subscribe to committees collection
     const unsubscribeCommittees = onSnapshot(collection(db, 'committees'), (snapshot) => {
-      const list: Committee[] = [];
+      const cloudCommittees: Committee[] = [];
       snapshot.forEach((doc) => {
-        list.push({ ...doc.data(), id: doc.id } as Committee);
+        cloudCommittees.push({ ...doc.data(), id: doc.id } as Committee);
       });
-      setCommitteesList(list);
+
+      const commMap = new Map<string, Committee>();
+      initialCommittees.forEach((c: Committee) => commMap.set(c.id, c));
+      cloudCommittees.forEach((c: Committee) => commMap.set(c.id, c));
+      setCommitteesList(Array.from(commMap.values()));
     });
 
     // 4. Subscribe to securityChecks collection
@@ -272,6 +284,70 @@ export default function App() {
       unsubscribeEvaluationResults();
     };
   }, []);
+
+  // Auto compile evaluation results and update candidate status when all 3 scores arrive via Firestore real-time sync
+  useEffect(() => {
+    committeesList.forEach(comm => {
+      const comScores = scoresList.filter(s => s.committeeId === comm.id);
+      const uniqueReviewerIds = Array.from(new Set(comScores.map(s => s.reviewerId)));
+      
+      if (uniqueReviewerIds.length >= 3) {
+        const cand = candidatesList.find(c => c.id === comm.candidateId);
+        const sub = submissionsList.find(s => s.candidateId === comm.candidateId);
+        const existingRes = evaluationResults.find(er => er.committeeId === comm.id);
+
+        if (!existingRes && cand && sub) {
+          const score3 = uniqueReviewerIds.slice(0, 3).map(revId => comScores.find(s => s.reviewerId === revId)!);
+          const average = parseFloat((score3.reduce((sum, s) => sum + s.totalScore, 0) / 3).toFixed(2));
+          const hasDisq = score3.some(s => s.isDisqualified);
+          
+          let passStatus: '합격' | '보완후합격' | '불합격' = '불합격';
+          if (!hasDisq) {
+            if (average >= 80) passStatus = '합격';
+            else if (average >= 70) passStatus = '보완후합격';
+          }
+
+          const autoResult: EvaluationResult = {
+            candidateId: cand.id,
+            committeeId: comm.id,
+            averageScore: average,
+            passStatus,
+            finalDecisionComment: hasDisq 
+              ? '보안 가이드라인 미준수 및 중대한 결격사유에 기인하여 불합격으로 판정함.' 
+              : `심사위원 3인의 루브릭 종합 채점 결과, 평균 ${average}점으로 최종 ${passStatus} 판정을 내립니다.`,
+            reviewerScores: score3.map(s => {
+              const u = usersList.find(x => x.id === s.reviewerId);
+              return {
+                reviewerId: s.reviewerId,
+                reviewerName: u?.name || '심사위원',
+                specialty: u?.specialty || 'tech',
+                score: s.totalScore,
+                score1: s.score1,
+                score2: s.score2,
+                score3: s.score3
+              };
+            })
+          };
+
+          setEvaluationResults(prev => [...prev.filter(r => r.committeeId !== comm.id), autoResult]);
+
+          if (isFirebaseConfigured && db) {
+            setDoc(doc(db, 'evaluationResults', cand.id), autoResult).catch(console.error);
+          }
+        }
+
+        // Auto update candidate status to 완료 if not already 완료
+        const candIdx = candidatesList.findIndex(c => c.id === comm.candidateId);
+        if (candIdx >= 0 && candidatesList[candIdx].status !== '완료') {
+          setCandidatesList(prev => prev.map(c => c.id === comm.candidateId ? { ...c, status: '완료' } : c));
+          if (isFirebaseConfigured && db) {
+            updateDoc(doc(db, 'candidates', comm.candidateId), { status: '완료' }).catch(console.error);
+            updateDoc(doc(db, 'committees', comm.id), { status: '완료' }).catch(console.error);
+          }
+        }
+      }
+    });
+  }, [scoresList, committeesList, candidatesList, submissionsList, usersList, evaluationResults]);
 
   // Load simulation data to Firebase Cloud DB or Local State
   const handleLoadSimulationData = async () => {
@@ -2787,7 +2863,8 @@ export default function App() {
                       
                       // Check if current reviewer submitted score
                       const myScore = scoresList.find(s => s.committeeId === comm?.id && s.reviewerId === currentUser.id);
-                      const allScoresForCom = scoresList.filter(s => s.committeeId === comm?.id);
+                      const submittedReviewerIds = Array.from(new Set(scoresList.filter(s => s.committeeId === comm?.id).map(s => s.reviewerId)));
+                      const submittedCount = submittedReviewerIds.length;
                       
                       return (
                         <tr key={cand.id}>
@@ -2810,9 +2887,15 @@ export default function App() {
                             )}
                           </td>
                           <td>
-                            <span className="badge badge-inprogress">
-                              {allScoresForCom.length} / 3 제출
-                            </span>
+                            {submittedCount >= 3 ? (
+                              <span className="badge badge-completed" style={{ background: 'rgba(74, 222, 128, 0.15)', border: '1px solid rgba(74, 222, 128, 0.4)', color: '#4ade80', fontWeight: 'bold' }}>
+                                🟢 3 / 3 제출 (완료)
+                              </span>
+                            ) : (
+                              <span className="badge badge-inprogress" style={{ background: 'rgba(251, 146, 60, 0.12)', border: '1px solid rgba(251, 146, 60, 0.35)', color: '#fdba74' }}>
+                                🟠 {submittedCount} / 3 제출
+                              </span>
+                            )}
                           </td>
                           <td>
                             <button 

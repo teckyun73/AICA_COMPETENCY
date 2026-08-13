@@ -2,12 +2,12 @@ import { initializeApp } from 'firebase/app';
 import { getFirestore } from 'firebase/firestore';
 
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyCo_qqcYL6osQ5TClLdDHhxR1H5xwerLOs",
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "aica-competency.firebaseapp.com",
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "aica-competency",
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "aica-competency.firebasestorage.app",
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "591835054146",
+  appId: import.meta.env.VITE_FIREBASE_APP_ID || "1:591835054146:web:962fb9369f92dc9d772ddb",
 };
 
 // Check if Firebase configuration keys are provided
