@@ -45,7 +45,6 @@ import {
   collection, 
   doc, 
   setDoc, 
-  updateDoc, 
   onSnapshot,
   deleteDoc
 } from 'firebase/firestore';
@@ -202,6 +201,13 @@ export default function App() {
       dept: '경영혁신실'
     }, { merge: true }).catch(console.error);
 
+    // Ensure all seed candidates, submissions, committees are populated in Firestore if missing
+    initialCandidates.forEach(c => setDoc(doc(db, 'candidates', c.id), c, { merge: true }).catch(console.error));
+    initialSubmissions.forEach(s => setDoc(doc(db, 'submissions', s.id), s, { merge: true }).catch(console.error));
+    initialCommittees.forEach(co => setDoc(doc(db, 'committees', co.id), co, { merge: true }).catch(console.error));
+    mockScores.forEach(sc => setDoc(doc(db, 'scores', sc.id), sc, { merge: true }).catch(console.error));
+    mockEvaluationResults.forEach(er => setDoc(doc(db, 'evaluationResults', er.candidateId), er, { merge: true }).catch(console.error));
+
     // 1. Subscribe to candidates collection
     const unsubscribeCandidates = onSnapshot(collection(db, 'candidates'), (snapshot) => {
       const cloudCandidates: Candidate[] = [];
@@ -341,8 +347,8 @@ export default function App() {
         if (candIdx >= 0 && candidatesList[candIdx].status !== '완료') {
           setCandidatesList(prev => prev.map(c => c.id === comm.candidateId ? { ...c, status: '완료' } : c));
           if (isFirebaseConfigured && db) {
-            updateDoc(doc(db, 'candidates', comm.candidateId), { status: '완료' }).catch(console.error);
-            updateDoc(doc(db, 'committees', comm.id), { status: '완료' }).catch(console.error);
+            setDoc(doc(db, 'candidates', comm.candidateId), { status: '완료' }, { merge: true }).catch(console.error);
+            setDoc(doc(db, 'committees', comm.id), { status: '완료' }, { merge: true }).catch(console.error);
           }
         }
       }
@@ -1231,9 +1237,9 @@ export default function App() {
 
       // [FIREBASE] Write evaluation result and update candidate/committee status to 완료
       if (isFirebaseConfigured && db) {
-        setDoc(doc(db, 'evaluationResults', selectedCandidate.id), finalResult).catch(console.error);
-        updateDoc(doc(db, 'candidates', selectedCandidate.id), { status: '완료' }).catch(console.error);
-        updateDoc(doc(db, 'committees', currentCommittee.id), { status: '완료' }).catch(console.error);
+        setDoc(doc(db, 'evaluationResults', selectedCandidate.id), finalResult, { merge: true }).catch(console.error);
+        setDoc(doc(db, 'candidates', selectedCandidate.id), { status: '완료' }, { merge: true }).catch(console.error);
+        setDoc(doc(db, 'committees', currentCommittee.id), { status: '완료' }, { merge: true }).catch(console.error);
       }
     } else {
       // Update Candidate Status to '평가중'
@@ -1245,8 +1251,8 @@ export default function App() {
 
         // [FIREBASE] Update status to 평가중
         if (isFirebaseConfigured && db) {
-          updateDoc(doc(db, 'candidates', selectedCandidate.id), { status: '평가중' }).catch(console.error);
-          updateDoc(doc(db, 'committees', currentCommittee.id), { status: '평가중' }).catch(console.error);
+          setDoc(doc(db, 'candidates', selectedCandidate.id), { status: '평가중' }, { merge: true }).catch(console.error);
+          setDoc(doc(db, 'committees', currentCommittee.id), { status: '평가중' }, { merge: true }).catch(console.error);
         }
       }
     }
