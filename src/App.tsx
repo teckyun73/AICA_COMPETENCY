@@ -240,11 +240,17 @@ export default function App() {
 
     // 5. Subscribe to scores collection
     const unsubscribeScores = onSnapshot(collection(db, 'scores'), (snapshot) => {
-      const list: Score[] = [];
+      const cloudScores: Score[] = [];
       snapshot.forEach((doc) => {
-        list.push({ ...doc.data(), id: doc.id } as Score);
+        cloudScores.push({ ...doc.data(), id: doc.id } as Score);
       });
-      setScoresList(list);
+
+      // Merge mockScores with cloudScores so all score updates are preserved
+      const scoreMap = new Map<string, Score>();
+      mockScores.forEach(s => scoreMap.set(`${s.committeeId}_${s.reviewerId}`, s));
+      cloudScores.forEach(s => scoreMap.set(`${s.committeeId}_${s.reviewerId}`, s));
+
+      setScoresList(Array.from(scoreMap.values()));
     });
 
     // 6. Subscribe to evaluationResults collection
@@ -917,7 +923,7 @@ export default function App() {
 
   // Sync reviewer scores if they already exist
   useEffect(() => {
-    if (selectedCandidate && currentUser.role === 'reviewer' && currentCommittee) {
+    if (selectedCandidate && (currentUser.role === 'reviewer' || currentUser.role === 'admin') && currentCommittee) {
       const existingScore = scoresList.find(
         s => s.committeeId === currentCommittee.id && s.reviewerId === currentUser.id
       );
@@ -959,25 +965,49 @@ export default function App() {
       setIsDisqualified(false);
       setDisqReason('');
     }
-  }, [selectedCandidate, currentUser, scoresList, securityChecks]);
+  }, [selectedCandidate, currentUser, currentCommittee, currentSubmission, scoresList, securityChecks]);
 
 
-  // Get other reviewers' scores for current candidate
-  const getOtherReviewersScores = () => {
+  // Get panel consensus status for all 3 committee members
+  const getPanelConsensusStatus = () => {
     if (!currentCommittee) return [];
-    return scoresList
-      .filter(s => s.committeeId === currentCommittee.id && s.reviewerId !== currentUser.id)
-      .map(s => {
-        const rev = usersList.find(u => u.id === s.reviewerId);
-        return {
-          name: rev?.name || '심사위원',
-          specialty: rev?.specialty || 'tech',
-          score: s.totalScore,
-          score1: s.score1,
-          score2: s.score2,
-          score3: s.score3
-        };
-      });
+
+    const r1 = usersList.find(u => u.id === currentCommittee.reviewer1Id);
+    const r2 = usersList.find(u => u.id === currentCommittee.reviewer2Id);
+    const r3 = usersList.find(u => u.id === currentCommittee.reviewer3Id);
+
+    const panelMembers = [
+      { user: r1, roleName: '현업·사업성 위원', roleAbbr: '현' },
+      { user: r2, roleName: 'AI·기술성 위원', roleAbbr: '기' },
+      { user: r3, roleName: '보안·거버넌스 위원', roleAbbr: '보' }
+    ];
+
+    return panelMembers.map(m => {
+      const submittedScore = scoresList.find(
+        s => s.committeeId === currentCommittee.id && s.reviewerId === m.user?.id
+      );
+      const isMe = m.user?.id === currentUser.id;
+
+      return {
+        reviewerId: m.user?.id,
+        name: m.user?.name || '미정',
+        affiliate: m.user?.affiliate || '',
+        dept: m.user?.dept || '',
+        roleName: m.roleName,
+        roleAbbr: m.roleAbbr,
+        specialty: m.user?.specialty,
+        hasSubmitted: !!submittedScore,
+        score: submittedScore?.totalScore,
+        score1: submittedScore?.score1,
+        score2: submittedScore?.score2,
+        score3: submittedScore?.score3,
+        comments1: submittedScore?.comments1,
+        comments2: submittedScore?.comments2,
+        comments3: submittedScore?.comments3,
+        submittedAt: submittedScore?.submittedAt,
+        isMe
+      };
+    });
   };
 
   // Calculate score deviation warning
@@ -3746,18 +3776,57 @@ export default function App() {
 
                 {/* Panel status dashboard */}
                 <div style={{ marginTop: '1.5rem', background: 'rgba(255,255,255,0.02)', padding: '1rem', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
-                  <h4 style={{ fontSize: '0.9rem', marginBottom: '0.5rem', color: 'var(--text-secondary)' }}>타 심사위원 평가 상태 (패널 합의 지원)</h4>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                    {getOtherReviewersScores().length === 0 ? (
-                      <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>아직 다른 심사위원이 평가를 제출하지 않았습니다.</p>
-                    ) : (
-                      getOtherReviewersScores().map((os, i) => (
-                        <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.8rem', background: 'rgba(255,255,255,0.02)', padding: '0.35rem 0.5rem', borderRadius: '4px' }}>
-                          <span>{os.name} ({os.specialty === 'business' ? '현업' : os.specialty === 'tech' ? '기술' : '보안'})</span>
-                          <span style={{ fontWeight: 'bold', color: 'var(--accent-secondary)' }}>{os.score} 점</span>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+                    <h4 style={{ fontSize: '0.9rem', color: 'var(--accent-secondary)', margin: 0, fontWeight: 700 }}>
+                      🛡️ 3인 심사위원 패널 평가 현황 & 실시간 합의 지원
+                    </h4>
+                    <span style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: 600 }}>
+                      제출 완료: <strong style={{ color: '#4ade80' }}>{getPanelConsensusStatus().filter(p => p.hasSubmitted).length}</strong> / 3 명
+                    </span>
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                    {getPanelConsensusStatus().map((panel, idx) => {
+                      const isExt = panel.affiliate === 'EXTERNAL';
+                      const affName = isExt ? '🌐 외부전문가' : (AFFILIATES.find(a => a.code === panel.affiliate)?.name || panel.affiliate);
+
+                      return (
+                        <div 
+                          key={idx} 
+                          style={{ 
+                            display: 'flex', 
+                            justifyContent: 'space-between', 
+                            alignItems: 'center', 
+                            fontSize: '0.8rem', 
+                            background: panel.isMe ? 'rgba(99, 102, 241, 0.12)' : 'rgba(255,255,255,0.02)', 
+                            border: panel.isMe ? '1px solid rgba(99, 102, 241, 0.4)' : '1px solid rgba(255,255,255,0.06)',
+                            padding: '0.5rem 0.75rem', 
+                            borderRadius: '6px' 
+                          }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <span className="badge" style={{ fontSize: '0.7rem', padding: '0.15rem 0.4rem', background: panel.roleAbbr === '현' ? 'rgba(59, 130, 246, 0.2)' : panel.roleAbbr === '기' ? 'rgba(168, 85, 247, 0.2)' : 'rgba(244, 63, 94, 0.2)', color: '#ffffff' }}>
+                              {panel.roleName}
+                            </span>
+                            <strong>{panel.name}</strong>
+                            <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>({panel.dept} · {affName})</span>
+                            {panel.isMe && <span style={{ fontSize: '0.7rem', color: 'var(--accent-secondary)', fontWeight: 'bold' }}>[나]</span>}
+                          </div>
+
+                          <div>
+                            {panel.hasSubmitted ? (
+                              <span className="badge" style={{ background: 'rgba(74, 222, 128, 0.15)', border: '1px solid rgba(74, 222, 128, 0.4)', color: '#4ade80', fontWeight: 'bold' }}>
+                                🟢 제출 완료 ({panel.score}점)
+                              </span>
+                            ) : (
+                              <span className="badge" style={{ background: 'rgba(251, 146, 60, 0.12)', border: '1px solid rgba(251, 146, 60, 0.35)', color: '#fdba74' }}>
+                                🟠 평가 진행 중 (미제출)
+                              </span>
+                            )}
+                          </div>
                         </div>
-                      ))
-                    )}
+                      );
+                    })}
                   </div>
                 </div>
 
