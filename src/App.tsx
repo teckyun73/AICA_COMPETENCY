@@ -1101,10 +1101,16 @@ export default function App() {
     ];
 
     return panelMembers.map(m => {
-      const submittedScore = scoresList.find(
-        s => s.committeeId === currentCommittee.id && s.reviewerId === m.user?.id
-      );
-      const isMe = m.user?.id === currentUser.id;
+      const submittedScore = scoresList.find(s => {
+        if (s.committeeId !== currentCommittee.id) return false;
+        if (m.user?.id && s.reviewerId === m.user.id) return true;
+        if (m.user?.email && s.reviewerId === m.user.email) return true;
+        if (m.user?.name && s.reviewerName && s.reviewerName.trim() === m.user.name.trim()) return true;
+        const sUser = usersList.find(u => u.id === s.reviewerId);
+        return sUser && m.user && (sUser.name === m.user.name || sUser.email === m.user.email);
+      });
+
+      const isMe = !!(m.user && (m.user.id === currentUser.id || m.user.email === currentUser.email || m.user.name === currentUser.name));
 
       return {
         reviewerId: m.user?.id,
@@ -1150,7 +1156,31 @@ export default function App() {
 
   // Save current evaluation
   const handleSaveEvaluation = () => {
-    if (!selectedCandidate || !currentCommittee || !currentSubmission) return;
+    if (!selectedCandidate) return;
+
+    const effectiveComm = currentCommittee || committeesList.find(c => c.candidateId === selectedCandidate.id) || {
+      id: `com_${selectedCandidate.id}`,
+      candidateId: selectedCandidate.id,
+      reviewer1Id: currentUser.id,
+      reviewer2Id: '',
+      reviewer3Id: '',
+      status: '평가중'
+    };
+
+    const effectiveSub = currentSubmission || submissionsList.find(s => s.candidateId === selectedCandidate.id) || {
+      id: `sub_${selectedCandidate.id}`,
+      candidateId: selectedCandidate.id,
+      title: '자격검정 제출 과제',
+      category: 'AI/RAG',
+      painPoint: '',
+      solution: '',
+      reportSummary: '',
+      codeStructure: '',
+      demoUrl: '',
+      reportUrl: '',
+      codeUrl: '',
+      submittedAt: new Date().toISOString().slice(0, 16).replace('T', ' ')
+    };
 
     // 1. Calculate weighted score
     // Level 3 weights: Complexity 30%, Implementation 40%, Assetization 30%
@@ -1164,8 +1194,8 @@ export default function App() {
 
     // 2. Update Scores List
     const newScore: Score = {
-      id: `score_${currentCommittee.id}_${currentUser.id}`,
-      committeeId: currentCommittee.id,
+      id: `score_${effectiveComm.id}_${currentUser.id}`,
+      committeeId: effectiveComm.id,
       reviewerId: currentUser.id,
       reviewerName: currentUser.name,
       score1: currentScore1,
@@ -1176,11 +1206,14 @@ export default function App() {
       comments3,
       totalScore: total,
       isDisqualified: isDisqualified,
-      disqualificationReason: isDisqualified ? disqReason : undefined,
       submittedAt: new Date().toISOString().replace('T', ' ').substring(0, 16)
     };
 
-    const scoreIdx = scoresList.findIndex(s => s.committeeId === currentCommittee.id && s.reviewerId === currentUser.id);
+    if (isDisqualified && disqReason) {
+      newScore.disqualificationReason = disqReason;
+    }
+
+    const scoreIdx = scoresList.findIndex(s => s.committeeId === effectiveComm.id && (s.reviewerId === currentUser.id || s.reviewerName === currentUser.name));
     let updatedScores = [...scoresList];
     if (scoreIdx >= 0) {
       updatedScores[scoreIdx] = newScore;
@@ -1190,13 +1223,13 @@ export default function App() {
     setScoresList(updatedScores);
 
     if (isFirebaseConfigured && db) {
-      setDoc(doc(db, 'scores', newScore.id), newScore).catch(console.error);
+      setDoc(doc(db, 'scores', newScore.id), newScore, { merge: true }).catch(console.error);
     }
 
     // 3. Update Security Check
     const newSecCheck: SecurityCheck = {
-      id: `sec_${currentSubmission.id}_${currentUser.id}`,
-      submissionId: currentSubmission.id,
+      id: `sec_${effectiveSub.id}_${currentUser.id}`,
+      submissionId: effectiveSub.id,
       reviewerId: currentUser.id,
       check1: secCheck1,
       check2: secCheck2,
@@ -1206,7 +1239,7 @@ export default function App() {
       notes: secNotes
     };
 
-    const secIdx = securityChecks.findIndex(sc => sc.submissionId === currentSubmission.id && sc.reviewerId === currentUser.id);
+    const secIdx = securityChecks.findIndex(sc => sc.submissionId === effectiveSub.id && sc.reviewerId === currentUser.id);
     let updatedSec = [...securityChecks];
     if (secIdx >= 0) {
       updatedSec[secIdx] = newSecCheck;
@@ -1216,12 +1249,12 @@ export default function App() {
     setSecurityChecks(updatedSec);
 
     if (isFirebaseConfigured && db) {
-      setDoc(doc(db, 'securityChecks', newSecCheck.id), newSecCheck).catch(console.error);
+      setDoc(doc(db, 'securityChecks', newSecCheck.id), newSecCheck, { merge: true }).catch(console.error);
     }
 
     // 4. Check if all assigned panel reviewers have submitted scores
-    const assignedIds = [currentCommittee.reviewer1Id, currentCommittee.reviewer2Id, currentCommittee.reviewer3Id].filter(Boolean);
-    const comScores = updatedScores.filter(s => s.committeeId === currentCommittee.id);
+    const assignedIds = [effectiveComm.reviewer1Id, effectiveComm.reviewer2Id, effectiveComm.reviewer3Id].filter(Boolean);
+    const comScores = updatedScores.filter(s => s.committeeId === effectiveComm.id);
     
     // Match scores by reviewerId, email, or name
     const matchingPanelScores = assignedIds.map(rId => {
@@ -1238,7 +1271,7 @@ export default function App() {
       const score3 = comScores.slice(0, 3);
       const average = parseFloat((score3.reduce((sum, s) => sum + s.totalScore, 0) / 3).toFixed(2));
       const hasDisq = score3.some(s => s.isDisqualified) || 
-                      updatedSec.filter(sc => sc.submissionId === currentSubmission.id).some(sc => !sc.check1 || !sc.check2 || !sc.check3);
+                      updatedSec.filter(sc => sc.submissionId === effectiveSub.id).some(sc => !sc.check1 || !sc.check2 || !sc.check3);
       
       let passStatus: '합격' | '보완후합격' | '불합격' = '불합격';
       if (!hasDisq) {
@@ -1248,7 +1281,7 @@ export default function App() {
 
       const finalResult: EvaluationResult = {
         candidateId: selectedCandidate.id,
-        committeeId: currentCommittee.id,
+        committeeId: effectiveComm.id,
         averageScore: average,
         passStatus,
         finalDecisionComment: hasDisq 
@@ -1268,7 +1301,7 @@ export default function App() {
         })
       };
 
-      setEvaluationResults(prev => [...prev.filter(r => r.candidateId !== selectedCandidate.id && r.committeeId !== currentCommittee.id), finalResult]);
+      setEvaluationResults(prev => [...prev.filter(r => r.candidateId !== selectedCandidate.id && r.committeeId !== effectiveComm.id), finalResult]);
 
       // Update Candidate Status to '완료'
       setCandidatesList(prev => prev.map(c => c.id === selectedCandidate.id ? { ...c, status: '완료' } : c));
@@ -1277,7 +1310,7 @@ export default function App() {
       if (isFirebaseConfigured && db) {
         setDoc(doc(db, 'evaluationResults', selectedCandidate.id), finalResult, { merge: true }).catch(console.error);
         setDoc(doc(db, 'candidates', selectedCandidate.id), { status: '완료' }, { merge: true }).catch(console.error);
-        setDoc(doc(db, 'committees', currentCommittee.id), { status: '완료' }, { merge: true }).catch(console.error);
+        setDoc(doc(db, 'committees', effectiveComm.id), { status: '완료' }, { merge: true }).catch(console.error);
       }
     } else {
       // Update Candidate Status to '평가중'
@@ -1286,7 +1319,7 @@ export default function App() {
       // [FIREBASE] Update status to 평가중
       if (isFirebaseConfigured && db) {
         setDoc(doc(db, 'candidates', selectedCandidate.id), { status: '평가중' }, { merge: true }).catch(console.error);
-        setDoc(doc(db, 'committees', currentCommittee.id), { status: '평가중' }, { merge: true }).catch(console.error);
+        setDoc(doc(db, 'committees', effectiveComm.id), { status: '평가중' }, { merge: true }).catch(console.error);
       }
     }
 
