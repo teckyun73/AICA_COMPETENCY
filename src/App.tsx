@@ -326,8 +326,8 @@ export default function App() {
 
         let passStatus: '합격' | '보완후합격' | '불합격' = '불합격';
         if (!hasDisq) {
-          if (average >= 80) passStatus = '합격';
-          else if (average >= 70) passStatus = '보완후합격';
+          if (average >= 70) passStatus = '합격';
+          else passStatus = '불합격';
         }
 
         const autoResult: EvaluationResult = {
@@ -1275,8 +1275,8 @@ export default function App() {
       
       let passStatus: '합격' | '보완후합격' | '불합격' = '불합격';
       if (!hasDisq) {
-        if (average >= 80) passStatus = '합격';
-        else if (average >= 70) passStatus = '보완후합격';
+        if (average >= 70) passStatus = '합격';
+        else passStatus = '불합격';
       }
 
       const finalResult: EvaluationResult = {
