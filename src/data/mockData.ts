@@ -62,6 +62,7 @@ export interface Score {
   id: string;
   committeeId: string;
   reviewerId: string;
+  reviewerName?: string;
   // Level 3: score1(Complexity), score2(Implementation), score3(Assetization)
   // Level 4: score1(Engineering), score2(Security), score3(Impact)
   score1: number; // 0-100 (or 1-5 maps to rubric)

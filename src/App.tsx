@@ -291,69 +291,93 @@ export default function App() {
     };
   }, []);
 
-  // Auto compile evaluation results and update candidate status when all 3 scores arrive via Firestore real-time sync
+  // Auto compile evaluation results and update candidate status when 3 scores arrive via Firestore real-time sync
   useEffect(() => {
     committeesList.forEach(comm => {
-      const comScores = scoresList.filter(s => s.committeeId === comm.id);
-      const uniqueReviewerIds = Array.from(new Set(comScores.map(s => s.reviewerId)));
+      const cand = candidatesList.find(c => c.id === comm.candidateId);
+      if (!cand) return;
+
+      const sub = submissionsList.find(s => s.candidateId === comm.candidateId);
+
+      // Find assigned reviewers for this committee
+      const assignedIds = [comm.reviewer1Id, comm.reviewer2Id, comm.reviewer3Id].filter(Boolean);
       
-      if (uniqueReviewerIds.length >= 3) {
-        const cand = candidatesList.find(c => c.id === comm.candidateId);
-        const sub = submissionsList.find(s => s.candidateId === comm.candidateId);
-        const existingRes = evaluationResults.find(er => er.committeeId === comm.id);
+      // Find submitted scores for this committee
+      const comScores = scoresList.filter(s => s.committeeId === comm.id);
+      
+      // Match submitted scores to assigned reviewers (by ID, email, or name)
+      const matchingScores = assignedIds.map(rId => {
+        const rUser = usersList.find(u => u.id === rId);
+        return comScores.find(s => 
+          s.reviewerId === rId || 
+          (rUser && (s.reviewerId === rUser.email || (s.reviewerName && s.reviewerName === rUser.name)))
+        );
+      }).filter((s): s is Score => !!s);
 
-        if (!existingRes && cand && sub) {
-          const score3 = uniqueReviewerIds.slice(0, 3).map(revId => comScores.find(s => s.reviewerId === revId)!);
-          const average = parseFloat((score3.reduce((sum, s) => sum + s.totalScore, 0) / 3).toFixed(2));
-          const hasDisq = score3.some(s => s.isDisqualified);
-          
-          let passStatus: '합격' | '보완후합격' | '불합격' = '불합격';
-          if (!hasDisq) {
-            if (average >= 80) passStatus = '합격';
-            else if (average >= 70) passStatus = '보완후합격';
-          }
+      // Unique reviewers count
+      const uniqueReviewers = Array.from(new Set(comScores.map(s => s.reviewerId)));
+      const submittedCount = Math.max(matchingScores.length, uniqueReviewers.length);
 
-          const autoResult: EvaluationResult = {
-            candidateId: cand.id,
-            committeeId: comm.id,
-            averageScore: average,
-            passStatus,
-            finalDecisionComment: hasDisq 
-              ? '보안 가이드라인 미준수 및 중대한 결격사유에 기인하여 불합격으로 판정함.' 
-              : `심사위원 3인의 루브릭 종합 채점 결과, 평균 ${average}점으로 최종 ${passStatus} 판정을 내립니다.`,
-            reviewerScores: score3.map(s => {
-              const u = usersList.find(x => x.id === s.reviewerId);
-              return {
-                reviewerId: s.reviewerId,
-                reviewerName: u?.name || '심사위원',
-                specialty: u?.specialty || 'tech',
-                score: s.totalScore,
-                score1: s.score1,
-                score2: s.score2,
-                score3: s.score3
-              };
-            })
-          };
+      if (submittedCount >= 3) {
+        const score3 = comScores.slice(0, 3);
+        const average = parseFloat((score3.reduce((sum, s) => sum + s.totalScore, 0) / 3).toFixed(2));
+        const hasDisq = score3.some(s => s.isDisqualified) || 
+                        securityChecks.filter(sc => sub && sc.submissionId === sub.id).some(sc => !sc.check1 || !sc.check2 || !sc.check3);
 
-          setEvaluationResults(prev => [...prev.filter(r => r.committeeId !== comm.id), autoResult]);
-
-          if (isFirebaseConfigured && db) {
-            setDoc(doc(db, 'evaluationResults', cand.id), autoResult).catch(console.error);
-          }
+        let passStatus: '합격' | '보완후합격' | '불합격' = '불합격';
+        if (!hasDisq) {
+          if (average >= 80) passStatus = '합격';
+          else if (average >= 70) passStatus = '보완후합격';
         }
 
-        // Auto update candidate status to 완료 if not already 완료
-        const candIdx = candidatesList.findIndex(c => c.id === comm.candidateId);
-        if (candIdx >= 0 && candidatesList[candIdx].status !== '완료') {
-          setCandidatesList(prev => prev.map(c => c.id === comm.candidateId ? { ...c, status: '완료' } : c));
-          if (isFirebaseConfigured && db) {
-            setDoc(doc(db, 'candidates', comm.candidateId), { status: '완료' }, { merge: true }).catch(console.error);
-            setDoc(doc(db, 'committees', comm.id), { status: '완료' }, { merge: true }).catch(console.error);
+        const autoResult: EvaluationResult = {
+          candidateId: cand.id,
+          committeeId: comm.id,
+          averageScore: average,
+          passStatus,
+          finalDecisionComment: hasDisq 
+            ? '보안 가이드라인 미준수 및 중대한 결격사유에 기인하여 불합격으로 판정함.' 
+            : `심사위원 3인의 루브릭 종합 채점 결과, 평균 ${average}점으로 최종 ${passStatus} 판정을 내립니다.`,
+          reviewerScores: score3.map(s => {
+            const u = usersList.find(x => x.id === s.reviewerId || x.email === s.reviewerId);
+            return {
+              reviewerId: s.reviewerId,
+              reviewerName: u?.name || '심사위원',
+              specialty: u?.specialty || 'tech',
+              score: s.totalScore,
+              score1: s.score1,
+              score2: s.score2,
+              score3: s.score3
+            };
+          })
+        };
+
+        setEvaluationResults(prev => {
+          const exists = prev.some(r => r.candidateId === cand.id || r.committeeId === comm.id);
+          if (!exists) {
+            return [...prev, autoResult];
           }
+          return prev.map(r => (r.candidateId === cand.id || r.committeeId === comm.id) ? autoResult : r);
+        });
+
+        if (isFirebaseConfigured && db) {
+          setDoc(doc(db, 'evaluationResults', cand.id), autoResult, { merge: true }).catch(console.error);
+          setDoc(doc(db, 'candidates', cand.id), { status: '완료' }, { merge: true }).catch(console.error);
+          setDoc(doc(db, 'committees', comm.id), { status: '완료' }, { merge: true }).catch(console.error);
+        }
+
+        if (cand.status !== '완료') {
+          setCandidatesList(prev => prev.map(c => c.id === cand.id ? { ...c, status: '완료' } : c));
+        }
+      } else if (submittedCount > 0 && cand.status === '대기') {
+        setCandidatesList(prev => prev.map(c => c.id === cand.id ? { ...c, status: '평가중' } : c));
+        if (isFirebaseConfigured && db) {
+          setDoc(doc(db, 'candidates', cand.id), { status: '평가중' }, { merge: true }).catch(console.error);
+          setDoc(doc(db, 'committees', comm.id), { status: '평가중' }, { merge: true }).catch(console.error);
         }
       }
     });
-  }, [scoresList, committeesList, candidatesList, submissionsList, usersList, evaluationResults]);
+  }, [scoresList, committeesList, candidatesList, submissionsList, usersList, securityChecks]);
 
   // Load simulation data to Firebase Cloud DB or Local State
   const handleLoadSimulationData = async () => {
@@ -1143,6 +1167,7 @@ export default function App() {
       id: `score_${currentCommittee.id}_${currentUser.id}`,
       committeeId: currentCommittee.id,
       reviewerId: currentUser.id,
+      reviewerName: currentUser.name,
       score1: currentScore1,
       score2: currentScore2,
       score3: currentScore3,
@@ -1194,12 +1219,25 @@ export default function App() {
       setDoc(doc(db, 'securityChecks', newSecCheck.id), newSecCheck).catch(console.error);
     }
 
-    // 4. Check if all 3 panel reviewers have submitted scores
-    const allScoresForCom = updatedScores.filter(s => s.committeeId === currentCommittee.id);
-    if (allScoresForCom.length === 3) {
-      // Auto compile final results
-      const average = parseFloat((allScoresForCom.reduce((sum, s) => sum + s.totalScore, 0) / 3).toFixed(2));
-      const hasDisq = allScoresForCom.some(s => s.isDisqualified) || 
+    // 4. Check if all assigned panel reviewers have submitted scores
+    const assignedIds = [currentCommittee.reviewer1Id, currentCommittee.reviewer2Id, currentCommittee.reviewer3Id].filter(Boolean);
+    const comScores = updatedScores.filter(s => s.committeeId === currentCommittee.id);
+    
+    // Match scores by reviewerId, email, or name
+    const matchingPanelScores = assignedIds.map(rId => {
+      const rUser = usersList.find(u => u.id === rId);
+      return comScores.find(s => 
+        s.reviewerId === rId || 
+        (rUser && (s.reviewerId === rUser.email || (s.reviewerName && s.reviewerName === rUser.name)))
+      );
+    }).filter((s): s is Score => !!s);
+
+    const submittedCount = Math.max(matchingPanelScores.length, Array.from(new Set(comScores.map(s => s.reviewerId))).length);
+
+    if (submittedCount >= 3) {
+      const score3 = comScores.slice(0, 3);
+      const average = parseFloat((score3.reduce((sum, s) => sum + s.totalScore, 0) / 3).toFixed(2));
+      const hasDisq = score3.some(s => s.isDisqualified) || 
                       updatedSec.filter(sc => sc.submissionId === currentSubmission.id).some(sc => !sc.check1 || !sc.check2 || !sc.check3);
       
       let passStatus: '합격' | '보완후합격' | '불합격' = '불합격';
@@ -1216,8 +1254,8 @@ export default function App() {
         finalDecisionComment: hasDisq 
           ? '보안 가이드라인 미준수 및 중대한 결격사유(지식재산권, 표절 등)에 기인하여 불합격으로 판정함.' 
           : `심사위원 3인의 루브릭 종합 채점 결과, 평균 ${average}점으로 최종 ${passStatus} 판정을 내립니다.`,
-        reviewerScores: allScoresForCom.map(s => {
-          const u = usersList.find(x => x.id === s.reviewerId);
+        reviewerScores: score3.map(s => {
+          const u = usersList.find(x => x.id === s.reviewerId || x.email === s.reviewerId);
           return {
             reviewerId: s.reviewerId,
             reviewerName: u?.name || '심사위원',
@@ -1230,22 +1268,10 @@ export default function App() {
         })
       };
 
-      const resultIdx = evaluationResults.findIndex(er => er.committeeId === currentCommittee.id);
-      let updatedResults = [...evaluationResults];
-      if (resultIdx >= 0) {
-        updatedResults[resultIdx] = finalResult;
-      } else {
-        updatedResults.push(finalResult);
-      }
-      setEvaluationResults(updatedResults);
+      setEvaluationResults(prev => [...prev.filter(r => r.candidateId !== selectedCandidate.id && r.committeeId !== currentCommittee.id), finalResult]);
 
       // Update Candidate Status to '완료'
-      const candIdx = candidatesList.findIndex(c => c.id === selectedCandidate.id);
-      if (candIdx >= 0) {
-        let updatedCands = [...candidatesList];
-        updatedCands[candIdx].status = '완료';
-        setCandidatesList(updatedCands);
-      }
+      setCandidatesList(prev => prev.map(c => c.id === selectedCandidate.id ? { ...c, status: '완료' } : c));
 
       // [FIREBASE] Write evaluation result and update candidate/committee status to 완료
       if (isFirebaseConfigured && db) {
@@ -1255,17 +1281,12 @@ export default function App() {
       }
     } else {
       // Update Candidate Status to '평가중'
-      const candIdx = candidatesList.findIndex(c => c.id === selectedCandidate.id);
-      if (candIdx >= 0 && candidatesList[candIdx].status === '대기') {
-        let updatedCands = [...candidatesList];
-        updatedCands[candIdx].status = '평가중';
-        setCandidatesList(updatedCands);
+      setCandidatesList(prev => prev.map(c => c.id === selectedCandidate.id && c.status === '대기' ? { ...c, status: '평가중' } : c));
 
-        // [FIREBASE] Update status to 평가중
-        if (isFirebaseConfigured && db) {
-          setDoc(doc(db, 'candidates', selectedCandidate.id), { status: '평가중' }, { merge: true }).catch(console.error);
-          setDoc(doc(db, 'committees', currentCommittee.id), { status: '평가중' }, { merge: true }).catch(console.error);
-        }
+      // [FIREBASE] Update status to 평가중
+      if (isFirebaseConfigured && db) {
+        setDoc(doc(db, 'candidates', selectedCandidate.id), { status: '평가중' }, { merge: true }).catch(console.error);
+        setDoc(doc(db, 'committees', currentCommittee.id), { status: '평가중' }, { merge: true }).catch(console.error);
       }
     }
 
@@ -1323,9 +1344,12 @@ export default function App() {
   ) => {
     if (!reviewer) return <span className="badge" style={{ background: 'rgba(255,255,255,0.05)', color: 'var(--text-muted)' }}>미정</span>;
 
-    const hasSubmitted = scoresList.some(
-      s => s.committeeId === committeeId && s.reviewerId === reviewer.id
-    );
+    const hasSubmitted = scoresList.some(s => {
+      if (s.committeeId !== committeeId) return false;
+      if (s.reviewerId === reviewer.id) return true;
+      const scoreUser = usersList.find(u => u.id === s.reviewerId);
+      return scoreUser?.name === reviewer.name || scoreUser?.email === reviewer.email;
+    });
 
     const statusText = hasSubmitted ? '완료' : '심사중';
     const statusColor = hasSubmitted ? '#4ade80' : '#fb923c'; 
@@ -1950,11 +1974,13 @@ export default function App() {
                       .filter(c => adminStatusFilter === 'all' || c.status === adminStatusFilter)
                       .map(cand => {
                       const comm = committeesList.find(co => co.candidateId === cand.id);
-                      const res = evaluationResults.find(er => er.candidateId === cand.id);
+                      const res = evaluationResults.find(er => er.candidateId === cand.id || (comm && er.committeeId === comm.id));
                       
                       const r1 = usersList.find(u => u.id === comm?.reviewer1Id);
                       const r2 = usersList.find(u => u.id === comm?.reviewer2Id);
                       const r3 = usersList.find(u => u.id === comm?.reviewer3Id);
+
+                      const displayStatus = (res || cand.status === '완료') ? '완료' : cand.status;
 
                       return (
                         <tr key={cand.id}>
@@ -1979,10 +2005,10 @@ export default function App() {
                           </td>
                           <td>
                             <span className={`badge ${
-                              cand.status === '완료' ? 'badge-completed' : 
-                              cand.status === '평가중' ? 'badge-inprogress' : 'badge-pending'
+                              displayStatus === '완료' ? 'badge-completed' : 
+                              displayStatus === '평가중' ? 'badge-inprogress' : 'badge-pending'
                             }`}>
-                              {cand.status}
+                              {displayStatus}
                             </span>
                           </td>
                           <td><strong>{res ? `${res.averageScore} 점` : '-'}</strong></td>
