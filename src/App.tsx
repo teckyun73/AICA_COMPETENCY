@@ -985,6 +985,18 @@ export default function App() {
   const [isDisqualified, setIsDisqualified] = useState<boolean>(false);
   const [disqReason, setDisqReason] = useState<string>('');
 
+  // Evaluation Completion Modal State
+  const [showEvalCompleteModal, setShowEvalCompleteModal] = useState<boolean>(false);
+  const [completedEvalSummary, setCompletedEvalSummary] = useState<{
+    candidateName: string;
+    candidateDept: string;
+    candidateAffiliate: string;
+    level: number;
+    totalScore: number;
+    submittedAt: string;
+    isDisqualified: boolean;
+  } | null>(null);
+
   // Filter state for Question Bank
   const [qSearchText, setQSearchText] = useState<string>('');
   const [qCategoryFilter, setQCategoryFilter] = useState<string>('all');
@@ -1257,9 +1269,16 @@ export default function App() {
       }
     }
 
-    alert('평가 점수 및 보안 체크리스트가 임시 저장/제출되었습니다.');
-    setView('reviewer');
-    setSelectedCandidate(null);
+    setCompletedEvalSummary({
+      candidateName: selectedCandidate.name,
+      candidateDept: selectedCandidate.dept,
+      candidateAffiliate: selectedCandidate.affiliate,
+      level: selectedCandidate.level,
+      totalScore: total,
+      submittedAt: newScore.submittedAt,
+      isDisqualified: isDisqualified
+    });
+    setShowEvalCompleteModal(true);
   };
 
   // Calculate stats for admin dashboard
@@ -2796,6 +2815,91 @@ export default function App() {
                       {editingReviewerId ? '💾 심사위원 정보 수정 완료' : newRevType === 'external' ? '🌐 외부 전문가 심사위원 등록' : '🏢 내부 심사위원 등록'}
                     </button>
                   </div>
+                </div>
+              </div>
+            )}
+
+            {/* Evaluation Submitted Confirmation Modal */}
+            {showEvalCompleteModal && completedEvalSummary && (
+              <div className="modal-overlay" style={{ background: 'rgba(15, 23, 42, 0.85)', backdropFilter: 'blur(8px)', zIndex: 9999 }}>
+                <div className="modal-content" style={{ maxWidth: '520px', textAlign: 'center', border: '1px solid rgba(74, 222, 128, 0.4)', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.5), 0 0 30px rgba(74, 222, 128, 0.15)', padding: '2rem' }}>
+                  
+                  {/* Glowing Icon Header */}
+                  <div style={{ display: 'inline-flex', padding: '1rem', background: 'rgba(74, 222, 128, 0.12)', borderRadius: '50%', color: '#4ade80', marginBottom: '1.25rem', border: '1px solid rgba(74, 222, 128, 0.3)' }}>
+                    <CheckCircle2 size={48} />
+                  </div>
+
+                  <h3 style={{ fontSize: '1.35rem', fontWeight: 800, color: '#ffffff', marginBottom: '0.5rem' }}>
+                    AICA 자격심사 제출이 완료되었습니다!
+                  </h3>
+                  <p style={{ fontSize: '0.88rem', color: 'var(--text-secondary)', marginBottom: '1.5rem', lineHeight: '1.5' }}>
+                    작성하신 채점 루브릭 점수 및 보안성 검증 체크리스트가 시스템 데이터베이스에 정상 제출되었습니다.
+                  </p>
+
+                  {/* Summary Card Box */}
+                  <div style={{ background: 'rgba(255, 255, 255, 0.03)', border: '1px solid rgba(255, 255, 255, 0.08)', borderRadius: '8px', padding: '1.25rem', textAlign: 'left', marginBottom: '1.75rem', display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
+                      <span style={{ color: 'var(--text-muted)' }}>심사 대상 지원자</span>
+                      <strong style={{ color: '#ffffff' }}>{completedEvalSummary.candidateName} <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', fontWeight: 'normal' }}>({completedEvalSummary.candidateDept})</span></strong>
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
+                      <span style={{ color: 'var(--text-muted)' }}>소속 법인</span>
+                      <span style={{ color: '#ffffff' }}>{AFFILIATES.find(a => a.code === completedEvalSummary.candidateAffiliate)?.name || completedEvalSummary.candidateAffiliate}</span>
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
+                      <span style={{ color: 'var(--text-muted)' }}>자격 검정 레벨</span>
+                      <span className="badge" style={{ backgroundColor: 'rgba(99, 102, 241, 0.15)', color: 'var(--accent-primary)' }}>
+                        AICA Level {completedEvalSummary.level}
+                      </span>
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', borderTop: '1px dashed rgba(255,255,255,0.1)', paddingTop: '0.65rem', marginTop: '0.25rem' }}>
+                      <span style={{ color: 'var(--text-muted)' }}>내 평가 제출 점수</span>
+                      <strong style={{ fontSize: '1.1rem', color: 'var(--accent-secondary)' }}>
+                        {completedEvalSummary.isDisqualified ? '⚠️ 결격 (불합격)' : `${completedEvalSummary.totalScore} 점`}
+                      </strong>
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
+                      <span style={{ color: 'var(--text-muted)' }}>제출 일시</span>
+                      <span style={{ color: 'var(--text-secondary)', fontSize: '0.8rem' }}>{completedEvalSummary.submittedAt}</span>
+                    </div>
+                  </div>
+
+                  {/* Confirm Action Button */}
+                  <button 
+                    className="btn-primary" 
+                    style={{ 
+                      width: '100%', 
+                      padding: '0.85rem', 
+                      fontSize: '0.95rem', 
+                      fontWeight: 700, 
+                      borderRadius: '6px',
+                      background: 'linear-gradient(135deg, #4ade80 0%, #22c55e 100%)',
+                      color: '#052e16',
+                      boxShadow: '0 4px 14px rgba(34, 197, 94, 0.35)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '0.5rem'
+                    }}
+                    onClick={() => {
+                      setShowEvalCompleteModal(false);
+                      setCompletedEvalSummary(null);
+                      if (currentUser.role === 'admin') {
+                        setView('admin');
+                      } else {
+                        setView('reviewer');
+                      }
+                      setSelectedCandidate(null);
+                    }}
+                  >
+                    <CheckCircle2 size={18} />
+                    확인 및 과제 목록으로 이동
+                  </button>
+
                 </div>
               </div>
             )}
