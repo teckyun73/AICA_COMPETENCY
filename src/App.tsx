@@ -172,9 +172,9 @@ export default function App() {
       initialUsers.forEach(u => userMap.set(u.id, u));
       cloudUsers.forEach(u => {
         if (u.id === 'admin1') {
-          userMap.set('admin1', { ...u, name: '이동운', email: 'dwlee@ateccn.kr' });
+          userMap.set('admin1', { ...u, name: '이동운', email: 'dwlee@ateccn.kr', role: 'admin', affiliate: 'C', dept: '경영혁신실', specialty: 'business' });
         } else if (u.id === 'admin2') {
-          userMap.set('admin2', { ...u, name: '우창흔', email: 'chwu@ateccn.kr' });
+          userMap.set('admin2', { ...u, name: '우창흔', email: 'chwu@ateccn.kr', role: 'admin', affiliate: 'C', dept: '경영혁신실', specialty: 'security' });
         } else {
           userMap.set(u.id, u);
         }
@@ -517,20 +517,20 @@ export default function App() {
 
   // Auto Panel Assign logic (Conflict of Interest Prevention)
   const handleAutoAssignPanel = (affiliate: string) => {
-    // 1. Business reviewer (Prefer external expert or internal non-conflicting reviewer)
+    // 1. Business reviewer (Prefer external expert or internal non-conflicting reviewer/admin)
     const bizReviewer = usersList.find(
-      u => !u.isDeleted && u.role === 'reviewer' && u.specialty === 'business' && (u.affiliate === 'EXTERNAL' || u.isExternal || u.affiliate !== affiliate)
-    ) || usersList.find(u => !u.isDeleted && u.role === 'reviewer' && u.specialty === 'business');
+      u => !u.isDeleted && (u.role === 'reviewer' || u.role === 'admin') && u.specialty === 'business' && (u.affiliate === 'EXTERNAL' || u.isExternal || u.affiliate !== affiliate)
+    ) || usersList.find(u => !u.isDeleted && (u.role === 'reviewer' || u.role === 'admin') && u.specialty === 'business');
     
     // 2. Tech reviewer
     const techReviewer = usersList.find(
-      u => !u.isDeleted && u.role === 'reviewer' && u.specialty === 'tech' && (u.affiliate === 'EXTERNAL' || u.isExternal || u.affiliate !== affiliate)
-    ) || usersList.find(u => !u.isDeleted && u.role === 'reviewer' && u.specialty === 'tech');
+      u => !u.isDeleted && (u.role === 'reviewer' || u.role === 'admin') && u.specialty === 'tech' && (u.affiliate === 'EXTERNAL' || u.isExternal || u.affiliate !== affiliate)
+    ) || usersList.find(u => !u.isDeleted && (u.role === 'reviewer' || u.role === 'admin') && u.specialty === 'tech');
 
     // 3. Security reviewer
     const secReviewer = usersList.find(
-      u => !u.isDeleted && u.role === 'reviewer' && u.specialty === 'security' && (u.affiliate === 'EXTERNAL' || u.isExternal || u.affiliate !== affiliate)
-    ) || usersList.find(u => !u.isDeleted && u.role === 'reviewer' && u.specialty === 'security');
+      u => !u.isDeleted && (u.role === 'reviewer' || u.role === 'admin') && u.specialty === 'security' && (u.affiliate === 'EXTERNAL' || u.isExternal || u.affiliate !== affiliate)
+    ) || usersList.find(u => !u.isDeleted && (u.role === 'reviewer' || u.role === 'admin') && u.specialty === 'security');
 
     if (bizReviewer) setNewReviewer1(bizReviewer.id);
     if (techReviewer) setNewReviewer2(techReviewer.id);
@@ -1406,10 +1406,20 @@ export default function App() {
                   <Users size={16} />
                   {currentUser.role === 'admin' ? '운영간사' : `심사위원 (${currentUser.specialty === 'business' ? '현업' : currentUser.specialty === 'tech' ? '기술' : '보안'})`} : <strong>{currentUser.name}</strong>
                 </span>
+                {currentUser.role === 'admin' && (
+                  <button 
+                    className="btn-secondary" 
+                    onClick={() => setView(view === 'admin' ? 'reviewer' : 'admin')}
+                    style={{ padding: '0.35rem 0.65rem', fontSize: '0.78rem', background: 'rgba(99, 102, 241, 0.18)', borderColor: 'rgba(99, 102, 241, 0.45)', color: '#c7d2fe', fontWeight: 600 }}
+                    title="운영간사 화면과 심사위원 점수 평가 화면 간 전환"
+                  >
+                    {view === 'admin' ? '🔍 심사위원 평가 모드' : '⚙️ 운영간사 관리 모드'}
+                  </button>
+                )}
                 <button 
                   className="btn-secondary" 
                   onClick={handleLogout}
-                  style={{ padding: '0.35rem 0.6rem', fontSize: '0.8rem', marginLeft: '0.5rem', background: 'rgba(239, 68, 68, 0.1)', borderColor: 'rgba(239, 68, 68, 0.3)', color: '#fda4af' }}
+                  style={{ padding: '0.35rem 0.6rem', fontSize: '0.8rem', marginLeft: '0.25rem', background: 'rgba(239, 68, 68, 0.1)', borderColor: 'rgba(239, 68, 68, 0.3)', color: '#fda4af' }}
                 >
                   로그아웃
                 </button>
@@ -2253,13 +2263,13 @@ export default function App() {
                           onChange={(e) => setNewReviewer1(e.target.value)}
                         >
                           <option value="">-- 선택 --</option>
-                          {usersList.filter(u => !u.isDeleted && u.role === 'reviewer' && u.specialty === 'business').map(u => {
+                          {usersList.filter(u => !u.isDeleted && (u.role === 'reviewer' || u.role === 'admin') && u.specialty === 'business').map(u => {
                             const isExternal = u.affiliate === 'EXTERNAL' || u.isExternal;
                             const isConflict = !isExternal && u.affiliate === newCandAffiliate;
                             const affName = isExternal ? '🌐 외부전문가' : (AFFILIATES.find(a => a.code === u.affiliate)?.name || u.affiliate);
                             return (
-                              <option key={u.id} value={u.id} style={{ color: isConflict ? '#ef4444' : isExternal ? '#a855f7' : 'inherit' }}>
-                                {u.name} ({u.dept} - {affName}){isExternal ? ' [외부전문가 · 이해상충없음]' : isConflict ? ' [이해상충 주의]' : ''}
+                              <option key={u.id} value={u.id} style={{ color: isConflict ? '#ef4444' : isExternal ? '#a855f7' : u.role === 'admin' ? '#fde047' : 'inherit' }}>
+                                {u.name} ({u.dept} - {affName}){u.role === 'admin' ? ' [👑 운영간사]' : isExternal ? ' [외부전문가 · 이해상충없음]' : isConflict ? ' [이해상충 주의]' : ''}
                               </option>
                             );
                           })}
@@ -2273,13 +2283,13 @@ export default function App() {
                           onChange={(e) => setNewReviewer2(e.target.value)}
                         >
                           <option value="">-- 선택 --</option>
-                          {usersList.filter(u => !u.isDeleted && u.role === 'reviewer' && u.specialty === 'tech').map(u => {
+                          {usersList.filter(u => !u.isDeleted && (u.role === 'reviewer' || u.role === 'admin') && u.specialty === 'tech').map(u => {
                             const isExternal = u.affiliate === 'EXTERNAL' || u.isExternal;
                             const isConflict = !isExternal && u.affiliate === newCandAffiliate;
                             const affName = isExternal ? '🌐 외부전문가' : (AFFILIATES.find(a => a.code === u.affiliate)?.name || u.affiliate);
                             return (
-                              <option key={u.id} value={u.id} style={{ color: isConflict ? '#ef4444' : isExternal ? '#a855f7' : 'inherit' }}>
-                                {u.name} ({u.dept} - {affName}){isExternal ? ' [외부전문가 · 이해상충없음]' : isConflict ? ' [이해상충 주의]' : ''}
+                              <option key={u.id} value={u.id} style={{ color: isConflict ? '#ef4444' : isExternal ? '#a855f7' : u.role === 'admin' ? '#fde047' : 'inherit' }}>
+                                {u.name} ({u.dept} - {affName}){u.role === 'admin' ? ' [👑 운영간사]' : isExternal ? ' [외부전문가 · 이해상충없음]' : isConflict ? ' [이해상충 주의]' : ''}
                               </option>
                             );
                           })}
@@ -2294,13 +2304,13 @@ export default function App() {
                         onChange={(e) => setNewReviewer3(e.target.value)}
                       >
                         <option value="">-- 선택 --</option>
-                        {usersList.filter(u => !u.isDeleted && u.role === 'reviewer' && u.specialty === 'security').map(u => {
+                        {usersList.filter(u => !u.isDeleted && (u.role === 'reviewer' || u.role === 'admin') && u.specialty === 'security').map(u => {
                           const isExternal = u.affiliate === 'EXTERNAL' || u.isExternal;
                           const isConflict = !isExternal && u.affiliate === newCandAffiliate;
                           const affName = isExternal ? '🌐 외부전문가' : (AFFILIATES.find(a => a.code === u.affiliate)?.name || u.affiliate);
                           return (
-                            <option key={u.id} value={u.id} style={{ color: isConflict ? '#ef4444' : isExternal ? '#a855f7' : 'inherit' }}>
-                              {u.name} ({u.dept} - {affName}){isExternal ? ' [외부전문가 · 이해상충없음]' : isConflict ? ' [이해상충 주의]' : ''}
+                            <option key={u.id} value={u.id} style={{ color: isConflict ? '#ef4444' : isExternal ? '#a855f7' : u.role === 'admin' ? '#fde047' : 'inherit' }}>
+                              {u.name} ({u.dept} - {affName}){u.role === 'admin' ? ' [👑 운영간사]' : isExternal ? ' [외부전문가 · 이해상충없음]' : isConflict ? ' [이해상충 주의]' : ''}
                             </option>
                           );
                         })}
@@ -2413,7 +2423,7 @@ export default function App() {
                       </thead>
                       <tbody>
                         {usersList
-                          .filter(u => !u.isDeleted && u.role === 'reviewer')
+                          .filter(u => !u.isDeleted && (u.role === 'reviewer' || u.role === 'admin'))
                           .filter(u => revFilterSpecialty === 'all' || u.specialty === revFilterSpecialty)
                           .filter(u => {
                             if (revFilterType === 'external') return u.affiliate === 'EXTERNAL' || u.isExternal;
@@ -2427,7 +2437,11 @@ export default function App() {
                             return (
                               <tr key={rev.id}>
                                 <td>
-                                  {isExt ? (
+                                  {rev.role === 'admin' ? (
+                                    <span className="badge" style={{ background: 'rgba(234, 179, 8, 0.15)', border: '1px solid rgba(234, 179, 8, 0.4)', color: '#fde047', fontWeight: 'bold' }}>
+                                      👑 운영간사 (겸 위원)
+                                    </span>
+                                  ) : isExt ? (
                                     <span className="badge" style={{ background: 'rgba(168, 85, 247, 0.15)', border: '1px solid rgba(168, 85, 247, 0.4)', color: '#d8b4fe', fontWeight: 'bold' }}>
                                       🌐 외부 전문가
                                     </span>

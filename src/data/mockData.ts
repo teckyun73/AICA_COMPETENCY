@@ -110,22 +110,24 @@ export const decrypt = (cipherText: string): string => {
 };
 
 const rawEncryptedUsers: User[] = [
-  // Admins (간사/운영)
+  // Admins (간사/운영) - 심사위원 겸임
   {
     id: "admin1",
     name: ":M5397.]:Mt3",
     email: "]Kgv]ZYD\\[Uo\\5QxOpw|",
     role: "admin",
-    affiliate: "A",
-    dept: "경영혁신실"
+    affiliate: "C",
+    dept: "경영혁신실",
+    specialty: "business"
   },
   {
     id: "admin2",
     name: ":Mtz:OF<:]5X",
     email: "\\5k6gXEkgJYm\\57xd6L@",
     role: "admin",
-    affiliate: "A",
-    dept: "경영혁신실"
+    affiliate: "C",
+    dept: "경영혁신실",
+    specialty: "security"
   },
   
   // Reviewers (심사위원 풀)
