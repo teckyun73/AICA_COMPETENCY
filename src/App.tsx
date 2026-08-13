@@ -4146,12 +4146,14 @@ export default function App() {
                       return s.committeeId === comm?.id;
                     })
                     .map(score => {
-                      const rev = initialUsers.find(u => u.id === score.reviewerId);
+                      const rev = usersList.find(u => u.id === score.reviewerId || u.email === score.reviewerId || u.name === score.reviewerName);
+                      const revName = rev?.name || score.reviewerName || '심사위원';
+                      const revSpecialty = rev?.specialty === 'business' ? '현업/비즈니스' : rev?.specialty === 'tech' ? 'AI기술' : rev?.specialty === 'security' ? '보안/거버넌스' : '전문분야';
                       return (
                         <tr key={score.id}>
-                          <td style={{ border: '1px solid #cbd5e1' }}><strong>{rev?.name}</strong></td>
+                          <td style={{ border: '1px solid #cbd5e1' }}><strong>{revName}</strong></td>
                           <td style={{ border: '1px solid #cbd5e1' }}>
-                            {rev?.specialty === 'business' ? '현업/비즈니스' : rev?.specialty === 'tech' ? 'AI기술' : '보안/거버넌스'}
+                            {revSpecialty}
                           </td>
                           <td style={{ border: '1px solid #cbd5e1' }}>{score.score1}점</td>
                           <td style={{ border: '1px solid #cbd5e1' }}>{score.score2}점</td>
@@ -4175,11 +4177,13 @@ export default function App() {
                     return s.committeeId === comm?.id;
                   })
                   .map(score => {
-                    const rev = initialUsers.find(u => u.id === score.reviewerId);
+                    const rev = usersList.find(u => u.id === score.reviewerId || u.email === score.reviewerId || u.name === score.reviewerName);
+                    const revName = rev?.name || score.reviewerName || '심사위원';
+                    const revSpecialty = rev?.specialty === 'business' ? '현업/비즈니스' : rev?.specialty === 'tech' ? 'AI기술' : rev?.specialty === 'security' ? '보안/거버넌스' : '전문분야';
                     return (
                       <div key={score.id} style={{ border: '1px solid #e2e8f0', borderRadius: '4px', padding: '1rem', background: '#f8fafc' }}>
                         <div style={{ borderBottom: '1px solid #e2e8f0', paddingBottom: '0.25rem', marginBottom: '0.5rem', fontSize: '0.85rem', color: '#475569', fontWeight: 'bold' }}>
-                          [{rev?.specialty === 'business' ? '현업/비즈니스' : rev?.specialty === 'tech' ? 'AI기술' : '보안/거버넌스'} 위원] {rev?.name}
+                          [{revSpecialty} 위원] {revName}
                         </div>
                         <div style={{ fontSize: '0.8rem', color: '#334155', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                           <p>• {selectedCandidate.level === 3 ? '문제해결 난이도' : '기술적 구현력'}: {score.comments1 || '의견 없음'}</p>
@@ -4202,21 +4206,21 @@ export default function App() {
                   <span style={{ fontSize: '0.8rem', color: '#64748b' }}>심사위원회 현업위원</span>
                   <div style={{ height: '50px' }}></div>
                   <strong style={{ fontSize: '0.95rem' }}>
-                    {initialUsers.find(u => u.id === currentCommittee?.reviewer1Id)?.name || '미정'} (인)
+                    {usersList.find(u => u.id === currentCommittee?.reviewer1Id)?.name || '미정'} (인)
                   </strong>
                 </div>
                 <div>
                   <span style={{ fontSize: '0.8rem', color: '#64748b' }}>심사위원회 기술위원</span>
                   <div style={{ height: '50px' }}></div>
                   <strong style={{ fontSize: '0.95rem' }}>
-                    {initialUsers.find(u => u.id === currentCommittee?.reviewer2Id)?.name || '미정'} (인)
+                    {usersList.find(u => u.id === currentCommittee?.reviewer2Id)?.name || '미정'} (인)
                   </strong>
                 </div>
                 <div>
                   <span style={{ fontSize: '0.8rem', color: '#64748b' }}>심사위원회 보안위원</span>
                   <div style={{ height: '50px' }}></div>
                   <strong style={{ fontSize: '0.95rem' }}>
-                    {initialUsers.find(u => u.id === currentCommittee?.reviewer3Id)?.name || '미정'} (인)
+                    {usersList.find(u => u.id === currentCommittee?.reviewer3Id)?.name || '미정'} (인)
                   </strong>
                 </div>
               </div>
