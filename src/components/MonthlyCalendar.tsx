@@ -21,9 +21,25 @@ export const MonthlyCalendar: React.FC<MonthlyCalendarProps> = ({
   committeesList,
   onSelectSchedule
 }) => {
-  // Default to July 2026 (matching mock data evaluation period)
-  const [currentYear, setCurrentYear] = useState(2026);
-  const [currentMonth, setCurrentMonth] = useState(7); // 1-indexed (7 = July)
+  // Current real-time date
+  const now = new Date();
+  const realYear = now.getFullYear();
+  const realMonth = now.getMonth() + 1; // 1-indexed (1 = Jan, 8 = Aug ...)
+  const realDay = now.getDate();
+
+  // Helper to format YYYY-MM-DD
+  const formatDateKey = (year: number, month: number, day: number) => {
+    const m = month < 10 ? `0${month}` : `${month}`;
+    const d = day < 10 ? `0${day}` : `${day}`;
+    return `${year}-${m}-${d}`;
+  };
+
+  const todayStr = formatDateKey(realYear, realMonth, realDay);
+  const todayDisplay = `${realYear}.${realMonth < 10 ? '0' + realMonth : realMonth}.${realDay < 10 ? '0' + realDay : realDay}`;
+
+  // Default to the actual real-time current year and month
+  const [currentYear, setCurrentYear] = useState(() => realYear);
+  const [currentMonth, setCurrentMonth] = useState(() => realMonth);
   const [filterLevel, setFilterLevel] = useState<'all' | '3' | '4'>('all');
 
   const handlePrevMonth = () => {
@@ -45,16 +61,9 @@ export const MonthlyCalendar: React.FC<MonthlyCalendarProps> = ({
   };
 
   const handleToday = () => {
-    const now = new Date();
-    setCurrentYear(now.getFullYear());
-    setCurrentMonth(now.getMonth() + 1);
-  };
-
-  // Helper to format YYYY-MM-DD
-  const formatDateKey = (year: number, month: number, day: number) => {
-    const m = month < 10 ? `0${month}` : `${month}`;
-    const d = day < 10 ? `0${day}` : `${day}`;
-    return `${year}-${m}-${d}`;
+    const current = new Date();
+    setCurrentYear(current.getFullYear());
+    setCurrentMonth(current.getMonth() + 1);
   };
 
   // Calculate calendar days
@@ -94,8 +103,6 @@ export const MonthlyCalendar: React.FC<MonthlyCalendarProps> = ({
       isCurrentMonth: false
     });
   }
-
-  const todayStr = '2026-07-22'; // Reference current simulation date
 
   return (
     <div className="card" style={{ marginBottom: '2rem', background: 'rgba(15, 23, 42, 0.65)', backdropFilter: 'blur(12px)', border: '1px solid var(--border-color)' }}>
@@ -144,10 +151,21 @@ export const MonthlyCalendar: React.FC<MonthlyCalendarProps> = ({
 
           <button 
             className="btn-secondary" 
-            style={{ fontSize: '0.8rem', padding: '0.3rem 0.6rem' }}
+            style={{ 
+              fontSize: '0.8rem', 
+              padding: '0.35rem 0.75rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.35rem',
+              background: (currentYear === realYear && currentMonth === realMonth) ? 'rgba(99, 102, 241, 0.2)' : 'rgba(255, 255, 255, 0.05)',
+              borderColor: (currentYear === realYear && currentMonth === realMonth) ? 'var(--accent-primary)' : 'var(--border-color)',
+              color: (currentYear === realYear && currentMonth === realMonth) ? '#c7d2fe' : 'var(--text-primary)',
+              fontWeight: 600
+            }}
             onClick={handleToday}
+            title="실시간 오늘 날짜로 캘린더 이동"
           >
-            오늘 (2026.07)
+            <span>📅 오늘 ({todayDisplay})</span>
           </button>
 
           <select 
@@ -201,7 +219,7 @@ export const MonthlyCalendar: React.FC<MonthlyCalendarProps> = ({
         {/* Days */}
         {calendarDays.map((cell, idx) => {
           const dateStr = formatDateKey(cell.year, cell.month, cell.day);
-          const isToday = dateStr === todayStr;
+          const isToday = cell.isCurrentMonth && dateStr === todayStr;
 
           // Filter candidates matching this date
           const matchingCandidates = candidatesList.filter(c => {
@@ -215,33 +233,53 @@ export const MonthlyCalendar: React.FC<MonthlyCalendarProps> = ({
             <div 
               key={idx}
               style={{
-                minHeight: '90px',
+                minHeight: '96px',
                 background: cell.isCurrentMonth 
-                  ? (isToday ? 'rgba(99, 102, 241, 0.08)' : 'rgba(255, 255, 255, 0.02)') 
+                  ? (isToday ? 'linear-gradient(145deg, rgba(99, 102, 241, 0.18), rgba(79, 70, 229, 0.08))' : 'rgba(255, 255, 255, 0.02)') 
                   : 'rgba(0, 0, 0, 0.25)',
                 border: isToday 
-                  ? '1px solid var(--accent-primary)' 
+                  ? '2px solid #818cf8' 
                   : '1px solid rgba(255, 255, 255, 0.05)',
-                borderRadius: '6px',
-                padding: '0.4rem',
-                opacity: cell.isCurrentMonth ? 1 : 0.4,
+                borderRadius: '8px',
+                padding: '0.45rem',
+                opacity: cell.isCurrentMonth ? 1 : 0.35,
                 display: 'flex',
                 flexDirection: 'column',
-                gap: '0.3rem',
+                gap: '0.35rem',
+                boxShadow: isToday ? '0 0 15px rgba(99, 102, 241, 0.35), inset 0 0 10px rgba(99, 102, 241, 0.15)' : 'none',
+                position: 'relative',
                 transition: 'all 0.2s ease'
               }}
             >
-              {/* Day Number */}
+              {/* Day Number & TODAY Badge */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ 
-                  fontSize: '0.8rem', 
+                  fontSize: '0.85rem', 
                   fontWeight: isToday ? 800 : 500,
-                  color: isToday ? 'var(--accent-secondary)' : cell.isCurrentMonth ? 'var(--text-primary)' : 'var(--text-muted)'
+                  color: isToday ? '#ffffff' : cell.isCurrentMonth ? 'var(--text-primary)' : 'var(--text-muted)',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: isToday ? '24px' : 'auto',
+                  height: isToday ? '24px' : 'auto',
+                  borderRadius: isToday ? '50%' : '0',
+                  background: isToday ? 'var(--accent-primary)' : 'transparent',
+                  boxShadow: isToday ? '0 2px 6px rgba(99, 102, 241, 0.6)' : 'none'
                 }}>
                   {cell.day}
                 </span>
                 {isToday && (
-                  <span style={{ fontSize: '0.65rem', background: 'var(--accent-primary)', color: 'white', padding: '0.05rem 0.35rem', borderRadius: '4px', fontWeight: 'bold' }}>
+                  <span style={{ 
+                    fontSize: '0.65rem', 
+                    background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)', 
+                    color: '#ffffff', 
+                    padding: '0.12rem 0.45rem', 
+                    borderRadius: '4px', 
+                    fontWeight: 800,
+                    letterSpacing: '0.5px',
+                    boxShadow: '0 2px 5px rgba(99, 102, 241, 0.5)',
+                    border: '1px solid rgba(255, 255, 255, 0.3)'
+                  }}>
                     TODAY
                   </span>
                 )}

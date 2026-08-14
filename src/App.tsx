@@ -4070,13 +4070,13 @@ export default function App() {
                   </tr>
                   <tr>
                     <th style={{ background: '#f8fafc', border: '1px solid #cbd5e1', color: '#475569' }}>심사 시행 일자</th>
-                    <td style={{ border: '1px solid #cbd5e1' }}><strong>{selectedCandidate.evalDate || '2026-07-22'}</strong></td>
+                    <td style={{ border: '1px solid #cbd5e1' }}><strong>{selectedCandidate.evalDate || new Date().toISOString().split('T')[0]}</strong></td>
                     <th style={{ background: '#f8fafc', border: '1px solid #cbd5e1', color: '#475569' }}>최종 승인 일시</th>
                     <td style={{ border: '1px solid #cbd5e1' }}>
                       {scoresList.filter(s => {
                         const comm = committeesList.find(co => co.candidateId === selectedCandidate.id);
                         return s.committeeId === comm?.id;
-                      }).slice(-1)[0]?.submittedAt || '2026-07-22 14:30'}
+                      }).slice(-1)[0]?.submittedAt || new Date().toISOString().replace('T', ' ').slice(0, 16)}
                     </td>
                   </tr>
                 </tbody>
