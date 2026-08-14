@@ -2571,35 +2571,50 @@ export default function App() {
 
             {/* Reviewer Management Modal */}
             {showReviewerMgmtModal && (
-              <div className="modal-overlay">
-                <div className="modal-content" style={{ maxWidth: '960px', width: '90%' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.75rem', marginBottom: '1.25rem' }}>
-                    <h3 style={{ fontSize: '1.2rem', color: 'var(--accent-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem', margin: 0 }}>
+              <div className="modal-overlay" style={{ padding: '1rem' }}>
+                <div 
+                  className="modal-content" 
+                  style={{ 
+                    width: '94vw', 
+                    maxWidth: '1420px', 
+                    maxHeight: '88vh',
+                    background: 'rgba(15, 23, 42, 0.96)',
+                    backdropFilter: 'blur(16px)',
+                    border: '1px solid rgba(168, 85, 247, 0.35)',
+                    borderRadius: '12px',
+                    padding: '1.75rem',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.75)'
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.85rem', marginBottom: '1.25rem' }}>
+                    <h3 style={{ fontSize: '1.25rem', color: 'var(--accent-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem', margin: 0, fontWeight: 700 }}>
                       <Users size={22} />
                       AICA 심사위원 풀 관리 및 신규 등록
                     </h3>
                     <button 
                       className="btn-secondary" 
                       onClick={() => setShowReviewerMgmtModal(false)}
-                      style={{ padding: '0.25rem 0.5rem', minWidth: 'auto' }}
+                      style={{ padding: '0.35rem 0.65rem', minWidth: 'auto', fontSize: '0.9rem' }}
                     >
                       ✕
                     </button>
                   </div>
 
                   {/* Info Notice Banner */}
-                  <div style={{ background: 'rgba(59, 130, 246, 0.08)', border: '1px solid rgba(59, 130, 246, 0.25)', borderRadius: '6px', padding: '0.75rem 1rem', marginBottom: '1.25rem', fontSize: '0.82rem', color: '#cbd5e1', lineHeight: '1.5' }}>
+                  <div style={{ background: 'rgba(59, 130, 246, 0.08)', border: '1px solid rgba(59, 130, 246, 0.25)', borderRadius: '6px', padding: '0.75rem 1rem', marginBottom: '1.25rem', fontSize: '0.85rem', color: '#cbd5e1', lineHeight: '1.5' }}>
                     💡 <strong>심사위원 풀 운영 안내:</strong> 사내 관계사 소속 위원뿐만 아니라 <strong>회사와 이해상충이 없는 외부 전문가(학계, 연구원, 외부기술자문단)</strong>를 등록하여 자격심사 패널로 즉시 지정할 수 있습니다. 등록된 심사위원은 성명(ID)과 이메일(비밀번호)로 시스템에 개별 로그인하여 평가를 진행합니다.
                   </div>
 
                   {/* Action Bar & Filters */}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.75rem' }}>
-                    <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                      <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>전문 분야:</span>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'nowrap', gap: '1rem' }}>
+                    <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'center', flexWrap: 'nowrap' }}>
+                      <span style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>전문 분야:</span>
                       <select
                         value={revFilterSpecialty}
                         onChange={(e) => setRevFilterSpecialty(e.target.value)}
-                        style={{ background: 'rgba(255,255,255,0.05)', color: 'white', border: '1px solid var(--border-color)', borderRadius: '4px', padding: '0.25rem 0.5rem', fontSize: '0.8rem' }}
+                        style={{ background: 'rgba(255,255,255,0.05)', color: 'white', border: '1px solid var(--border-color)', borderRadius: '4px', padding: '0.3rem 0.6rem', fontSize: '0.82rem', whiteSpace: 'nowrap' }}
                       >
                         <option value="all">전체 분야</option>
                         <option value="business">💼 현업·사업성</option>
@@ -2607,11 +2622,11 @@ export default function App() {
                         <option value="security">🛡️ 보안·거버넌스</option>
                       </select>
 
-                      <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginLeft: '0.5rem' }}>구분:</span>
+                      <span style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', marginLeft: '0.5rem', whiteSpace: 'nowrap' }}>구분:</span>
                       <select
                         value={revFilterType}
                         onChange={(e) => setRevFilterType(e.target.value)}
-                        style={{ background: 'rgba(255,255,255,0.05)', color: 'white', border: '1px solid var(--border-color)', borderRadius: '4px', padding: '0.25rem 0.5rem', fontSize: '0.8rem' }}
+                        style={{ background: 'rgba(255,255,255,0.05)', color: 'white', border: '1px solid var(--border-color)', borderRadius: '4px', padding: '0.3rem 0.6rem', fontSize: '0.82rem', whiteSpace: 'nowrap' }}
                       >
                         <option value="all">전체 위원</option>
                         <option value="internal">🏢 내부 임직원</option>
@@ -2621,7 +2636,7 @@ export default function App() {
 
                     <button
                       className="btn-primary"
-                      style={{ display: 'flex', alignItems: 'center', gap: '0.35rem', fontSize: '0.82rem', padding: '0.45rem 0.9rem' }}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem', padding: '0.45rem 1rem', whiteSpace: 'nowrap', flexShrink: 0 }}
                       onClick={() => {
                         resetAddReviewerForm();
                         setShowAddReviewerModal(true);
@@ -2633,18 +2648,18 @@ export default function App() {
                   </div>
 
                   {/* Reviewer Table */}
-                  <div style={{ maxHeight: '420px', overflowY: 'auto', border: '1px solid var(--border-color)', borderRadius: '6px' }}>
-                    <table style={{ margin: 0 }}>
+                  <div style={{ overflowX: 'auto', overflowY: 'auto', flex: 1, maxHeight: 'calc(88vh - 230px)', border: '1px solid var(--border-color)', borderRadius: '8px' }}>
+                    <table style={{ width: '100%', minWidth: '1150px', borderCollapse: 'collapse' }}>
                       <thead>
-                        <tr>
-                          <th>전문가 구분</th>
-                          <th>성명</th>
-                          <th>이메일 (로그인 ID/PW)</th>
-                          <th>심사 분야</th>
-                          <th>소속 (관계사/외부기관)</th>
-                          <th>부서 / 직함</th>
-                          <th>이해상충 적격성</th>
-                          <th>관리</th>
+                        <tr style={{ background: 'rgba(255, 255, 255, 0.05)', position: 'sticky', top: 0, zIndex: 10 }}>
+                          <th style={{ whiteSpace: 'nowrap', width: '140px', padding: '0.75rem 0.65rem', textAlign: 'left' }}>전문가 구분</th>
+                          <th style={{ whiteSpace: 'nowrap', width: '90px', padding: '0.75rem 0.65rem', textAlign: 'left' }}>성명</th>
+                          <th style={{ whiteSpace: 'nowrap', minWidth: '180px', padding: '0.75rem 0.65rem', textAlign: 'left' }}>이메일 (로그인 ID/PW)</th>
+                          <th style={{ whiteSpace: 'nowrap', width: '130px', padding: '0.75rem 0.65rem', textAlign: 'left' }}>심사 분야</th>
+                          <th style={{ whiteSpace: 'nowrap', width: '140px', padding: '0.75rem 0.65rem', textAlign: 'left' }}>소속 (관계사/외부기관)</th>
+                          <th style={{ whiteSpace: 'nowrap', width: '140px', padding: '0.75rem 0.65rem', textAlign: 'left' }}>부서 / 직함</th>
+                          <th style={{ whiteSpace: 'nowrap', minWidth: '220px', padding: '0.75rem 0.65rem', textAlign: 'left' }}>이해상충 적격성</th>
+                          <th style={{ whiteSpace: 'nowrap', width: '135px', padding: '0.75rem 0.65rem', textAlign: 'center' }}>관리</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -2661,59 +2676,59 @@ export default function App() {
                             const affName = isExt ? '🌐 외부전문가' : (AFFILIATES.find(a => a.code === rev.affiliate)?.name || rev.affiliate);
                             
                             return (
-                              <tr key={rev.id}>
-                                <td>
+                              <tr key={rev.id} style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.04)' }}>
+                                <td style={{ whiteSpace: 'nowrap', padding: '0.65rem' }}>
                                   {rev.role === 'admin' ? (
-                                    <span className="badge" style={{ background: 'rgba(234, 179, 8, 0.15)', border: '1px solid rgba(234, 179, 8, 0.4)', color: '#fde047', fontWeight: 'bold' }}>
+                                    <span className="badge" style={{ background: 'rgba(234, 179, 8, 0.15)', border: '1px solid rgba(234, 179, 8, 0.4)', color: '#fde047', fontWeight: 'bold', whiteSpace: 'nowrap' }}>
                                       👑 운영간사 (겸 위원)
                                     </span>
                                   ) : isExt ? (
-                                    <span className="badge" style={{ background: 'rgba(168, 85, 247, 0.15)', border: '1px solid rgba(168, 85, 247, 0.4)', color: '#d8b4fe', fontWeight: 'bold' }}>
+                                    <span className="badge" style={{ background: 'rgba(168, 85, 247, 0.15)', border: '1px solid rgba(168, 85, 247, 0.4)', color: '#d8b4fe', fontWeight: 'bold', whiteSpace: 'nowrap' }}>
                                       🌐 외부 전문가
                                     </span>
                                   ) : (
-                                    <span className="badge" style={{ background: 'rgba(59, 130, 246, 0.15)', border: '1px solid rgba(59, 130, 246, 0.4)', color: '#93c5fd' }}>
+                                    <span className="badge" style={{ background: 'rgba(59, 130, 246, 0.15)', border: '1px solid rgba(59, 130, 246, 0.4)', color: '#93c5fd', whiteSpace: 'nowrap' }}>
                                       🏢 내부 임직원
                                     </span>
                                   )}
                                 </td>
-                                <td><strong>{rev.name}</strong></td>
-                                <td style={{ fontFamily: 'monospace', fontSize: '0.78rem', color: 'var(--accent-secondary)' }}>{rev.email}</td>
-                                <td>
+                                <td style={{ whiteSpace: 'nowrap', padding: '0.65rem' }}><strong>{rev.name}</strong></td>
+                                <td style={{ fontFamily: 'monospace', fontSize: '0.82rem', color: 'var(--accent-secondary)', whiteSpace: 'nowrap', padding: '0.65rem' }}>{rev.email}</td>
+                                <td style={{ whiteSpace: 'nowrap', padding: '0.65rem' }}>
                                   <span className={`badge ${
                                     rev.specialty === 'business' ? 'badge-specialty-business' :
                                     rev.specialty === 'tech' ? 'badge-specialty-tech' :
                                     'badge-specialty-security'
-                                  }`}>
+                                  }`} style={{ whiteSpace: 'nowrap' }}>
                                     {rev.specialty === 'business' ? '💼 현업·사업성' : rev.specialty === 'tech' ? '🤖 AI·기술성' : '🛡️ 보안·거버넌스'}
                                   </span>
                                 </td>
-                                <td>{affName}</td>
-                                <td>{rev.dept}</td>
-                                <td>
+                                <td style={{ whiteSpace: 'nowrap', padding: '0.65rem' }}>{affName}</td>
+                                <td style={{ whiteSpace: 'nowrap', padding: '0.65rem' }}>{rev.dept}</td>
+                                <td style={{ whiteSpace: 'nowrap', padding: '0.65rem' }}>
                                   {isExt ? (
-                                    <span style={{ fontSize: '0.72rem', color: '#4ade80', fontWeight: 600 }}>● 전 관계사 배정가능 (이해상충 없음)</span>
+                                    <span style={{ fontSize: '0.78rem', color: '#4ade80', fontWeight: 600, whiteSpace: 'nowrap' }}>● 전 관계사 배정가능 (이해상충 없음)</span>
                                   ) : (
-                                    <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>● 자사({rev.affiliate}) 제외 배정</span>
+                                    <span style={{ fontSize: '0.78rem', color: '#94a3b8', whiteSpace: 'nowrap' }}>● 자사({rev.affiliate}) 제외 배정</span>
                                   )}
                                 </td>
-                                <td>
-                                  <div style={{ display: 'flex', gap: '0.25rem', alignItems: 'center' }}>
+                                <td style={{ whiteSpace: 'nowrap', padding: '0.65rem', textAlign: 'center' }}>
+                                  <div style={{ display: 'flex', gap: '0.35rem', justifyContent: 'center', alignItems: 'center', flexWrap: 'nowrap' }}>
                                     <button
                                       className="btn-secondary"
-                                      style={{ padding: '0.2rem 0.45rem', fontSize: '0.72rem', display: 'inline-flex', alignItems: 'center', gap: '0.2rem' }}
+                                      style={{ padding: '0.25rem 0.45rem', fontSize: '0.72rem', display: 'inline-flex', alignItems: 'center', gap: '0.2rem', whiteSpace: 'nowrap' }}
                                       onClick={() => handleOpenEditReviewer(rev)}
                                       title="심사위원 정보 수정"
                                     >
-                                      <Edit size={11} /> 수정
+                                      <Edit size={12} /> 수정
                                     </button>
                                     <button
                                       className="btn-secondary"
-                                      style={{ padding: '0.2rem 0.45rem', fontSize: '0.72rem', background: 'rgba(239, 68, 68, 0.15)', border: '1px solid rgba(239, 68, 68, 0.35)', color: '#fca5a5', display: 'inline-flex', alignItems: 'center', gap: '0.2rem' }}
+                                      style={{ padding: '0.25rem 0.45rem', fontSize: '0.72rem', background: 'rgba(239, 68, 68, 0.15)', border: '1px solid rgba(239, 68, 68, 0.35)', color: '#fca5a5', display: 'inline-flex', alignItems: 'center', gap: '0.2rem', whiteSpace: 'nowrap' }}
                                       onClick={() => handleDeleteReviewer(rev)}
                                       title="심사위원 삭제"
                                     >
-                                      <Trash2 size={11} color="#fca5a5" /> 삭제
+                                      <Trash2 size={12} color="#fca5a5" /> 삭제
                                     </button>
                                   </div>
                                 </td>
@@ -2728,7 +2743,7 @@ export default function App() {
                     <button
                       className="btn-secondary"
                       onClick={() => setShowReviewerMgmtModal(false)}
-                      style={{ padding: '0.4rem 1.25rem' }}
+                      style={{ padding: '0.5rem 1.75rem', fontWeight: 600 }}
                     >
                       닫기
                     </button>
