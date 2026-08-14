@@ -1418,10 +1418,12 @@ export default function App() {
           alignItems: 'center',
           gap: '0.25rem',
           fontSize: '0.72rem',
-          padding: '0.15rem 0.35rem'
+          padding: '0.15rem 0.4rem',
+          whiteSpace: 'nowrap',
+          flexShrink: 0
         }}
       >
-        <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: statusColor, display: 'inline-block' }}></span>
+        <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: statusColor, display: 'inline-block', flexShrink: 0 }}></span>
         {reviewer.name}({roleAbbr}·{statusText})
       </span>
     );
@@ -2119,46 +2121,63 @@ export default function App() {
             </div>
 
             {statsModalType !== null && (
-              <div className="modal-overlay">
-                <div className="modal-content" style={{ maxWidth: '900px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.75rem', marginBottom: '1.5rem' }}>
-                    <h3 style={{ fontSize: '1.2rem', color: 'var(--accent-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem', margin: 0 }}>
-                      <Users size={20} />
+              <div className="modal-overlay" style={{ padding: '1rem' }}>
+                <div 
+                  className="modal-content" 
+                  style={{ 
+                    width: '94vw', 
+                    maxWidth: '1420px', 
+                    maxHeight: '88vh',
+                    background: 'rgba(15, 23, 42, 0.96)',
+                    backdropFilter: 'blur(16px)',
+                    border: '1px solid rgba(99, 102, 241, 0.35)',
+                    borderRadius: '12px',
+                    padding: '1.75rem',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.75)'
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.85rem', marginBottom: '1.25rem' }}>
+                    <h3 style={{ fontSize: '1.25rem', color: 'var(--accent-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem', margin: 0, fontWeight: 700 }}>
+                      <Users size={22} />
                       {statsModalType === 'total' && '전체 지원자 세부 정보'}
                       {statsModalType === 'completed' && '평가 완료 인원 세부 정보'}
                       {statsModalType === 'evaluating' && '평가 진행 중 인원 세부 정보'}
                       {statsModalType === 'pending' && '심사 대기 인원 세부 정보'}
-                      {' '}({
-                        candidatesList.filter(c => 
-                          statsModalType === 'total' ? true :
-                          statsModalType === 'completed' ? c.status === '완료' :
-                          statsModalType === 'evaluating' ? c.status === '평가중' :
-                          c.status === '대기'
-                        ).length
-                      }명)
+                      {' '}<span style={{ fontSize: '0.95rem', color: 'var(--accent-secondary)', fontWeight: 600 }}>
+                        ({
+                          candidatesList.filter(c => 
+                            statsModalType === 'total' ? true :
+                            statsModalType === 'completed' ? c.status === '완료' :
+                            statsModalType === 'evaluating' ? c.status === '평가중' :
+                            c.status === '대기'
+                          ).length
+                        }명)
+                      </span>
                     </h3>
                     <button 
                       className="btn-secondary" 
                       onClick={() => setStatsModalType(null)}
-                      style={{ padding: '0.25rem 0.5rem', minWidth: 'auto' }}
+                      style={{ padding: '0.35rem 0.65rem', minWidth: 'auto', fontSize: '0.9rem' }}
                     >
                       ✕
                     </button>
                   </div>
 
-                  <div style={{ overflowX: 'auto' }}>
-                    <table>
+                  <div style={{ overflowX: 'auto', overflowY: 'auto', flex: 1, maxHeight: 'calc(88vh - 170px)', border: '1px solid var(--border-color)', borderRadius: '8px' }}>
+                    <table style={{ width: '100%', minWidth: '1150px', borderCollapse: 'collapse' }}>
                       <thead>
-                        <tr>
-                          <th>관계사</th>
-                          <th>성명</th>
-                          <th>부서</th>
-                          <th>레벨</th>
-                          <th>제출 과제명</th>
-                          <th>심사 패널</th>
-                          <th>상태</th>
-                          <th>종합점수</th>
-                          <th>액션</th>
+                        <tr style={{ background: 'rgba(255, 255, 255, 0.05)', position: 'sticky', top: 0, zIndex: 10 }}>
+                          <th style={{ whiteSpace: 'nowrap', width: '110px', padding: '0.75rem 0.65rem', textAlign: 'left' }}>관계사</th>
+                          <th style={{ whiteSpace: 'nowrap', width: '85px', padding: '0.75rem 0.65rem', textAlign: 'left' }}>성명</th>
+                          <th style={{ whiteSpace: 'nowrap', width: '120px', padding: '0.75rem 0.65rem', textAlign: 'left' }}>부서</th>
+                          <th style={{ whiteSpace: 'nowrap', width: '75px', padding: '0.75rem 0.65rem', textAlign: 'center' }}>레벨</th>
+                          <th style={{ whiteSpace: 'nowrap', minWidth: '260px', padding: '0.75rem 0.65rem', textAlign: 'left' }}>제출 과제명</th>
+                          <th style={{ whiteSpace: 'nowrap', minWidth: '340px', padding: '0.75rem 0.65rem', textAlign: 'left' }}>심사 패널</th>
+                          <th style={{ whiteSpace: 'nowrap', width: '85px', padding: '0.75rem 0.65rem', textAlign: 'center' }}>상태</th>
+                          <th style={{ whiteSpace: 'nowrap', width: '90px', padding: '0.75rem 0.65rem', textAlign: 'center' }}>종합점수</th>
+                          <th style={{ whiteSpace: 'nowrap', width: '135px', padding: '0.75rem 0.65rem', textAlign: 'center' }}>액션</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -2171,76 +2190,79 @@ export default function App() {
                           )
                           .map(cand => {
                             const comm = committeesList.find(co => co.candidateId === cand.id);
-                            const res = evaluationResults.find(er => er.candidateId === cand.id);
+                            const res = evaluationResults.find(er => er.candidateId === cand.id || (comm && er.committeeId === comm.id));
                             const sub = submissionsList.find(s => s.candidateId === cand.id);
                             
                             const r1 = usersList.find(u => u.id === comm?.reviewer1Id);
                             const r2 = usersList.find(u => u.id === comm?.reviewer2Id);
                             const r3 = usersList.find(u => u.id === comm?.reviewer3Id);
 
+                            const displayStatus = (res || cand.status === '완료') ? '완료' : cand.status;
+
                             return (
-                              <tr key={cand.id}>
-                                <td>{AFFILIATES.find(a => a.code === cand.affiliate)?.name || cand.affiliate}</td>
-                                <td><strong>{cand.name}</strong></td>
-                                <td>{cand.dept}</td>
-                                <td>
-                                  <span className="badge" style={{ backgroundColor: 'rgba(99, 102, 241, 0.1)', color: 'var(--accent-primary)' }}>
+                              <tr key={cand.id} style={{ borderBottom: '1px solid rgba(255, 255, 255, 0.04)' }}>
+                                <td style={{ whiteSpace: 'nowrap', padding: '0.65rem' }}>{AFFILIATES.find(a => a.code === cand.affiliate)?.name || cand.affiliate}</td>
+                                <td style={{ whiteSpace: 'nowrap', padding: '0.65rem' }}><strong>{cand.name}</strong></td>
+                                <td style={{ whiteSpace: 'nowrap', padding: '0.65rem' }}>{cand.dept}</td>
+                                <td style={{ whiteSpace: 'nowrap', padding: '0.65rem', textAlign: 'center' }}>
+                                  <span className="badge" style={{ backgroundColor: 'rgba(99, 102, 241, 0.12)', color: 'var(--accent-primary)', padding: '0.15rem 0.45rem', whiteSpace: 'nowrap' }}>
                                     Level {cand.level}
                                   </span>
                                 </td>
-                                <td style={{ fontSize: '0.8rem', maxWidth: '250px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={sub?.title}>
+                                <td style={{ maxWidth: '340px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', padding: '0.65rem', fontSize: '0.82rem' }} title={sub?.title}>
                                   {sub?.title || '-'}
                                 </td>
-                                <td>
+                                <td style={{ whiteSpace: 'nowrap', padding: '0.65rem' }}>
                                   {comm ? (
-                                    <div style={{ display: 'flex', gap: '0.25rem', fontSize: '0.75rem' }}>
+                                    <div style={{ display: 'flex', gap: '0.35rem', alignItems: 'center', flexWrap: 'nowrap' }}>
                                       {renderReviewerBadge(r1, '현', comm.id, 'badge-specialty-business')}
                                       {renderReviewerBadge(r2, '기', comm.id, 'badge-specialty-tech')}
                                       {renderReviewerBadge(r3, '보', comm.id, 'badge-specialty-security')}
                                     </div>
                                   ) : (
-                                    <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>패널 미배정</span>
+                                    <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem', whiteSpace: 'nowrap' }}>패널 미배정</span>
                                   )}
                                 </td>
-                                <td>
+                                <td style={{ whiteSpace: 'nowrap', padding: '0.65rem', textAlign: 'center' }}>
                                   <span className={`badge ${
-                                    cand.status === '완료' ? 'badge-completed' : 
-                                    cand.status === '평가중' ? 'badge-inprogress' : 'badge-pending'
-                                  }`}>
-                                    {cand.status}
+                                    displayStatus === '완료' ? 'badge-completed' : 
+                                    displayStatus === '평가중' ? 'badge-inprogress' : 'badge-pending'
+                                  }`} style={{ whiteSpace: 'nowrap' }}>
+                                    {displayStatus}
                                   </span>
                                 </td>
-                                <td><strong>{res ? `${res.averageScore} 점` : '-'}</strong></td>
-                                <td>
-                                  <div style={{ display: 'flex', gap: '0.25rem', alignItems: 'center' }}>
+                                <td style={{ whiteSpace: 'nowrap', padding: '0.65rem', textAlign: 'center' }}><strong>{res ? `${res.averageScore} 점` : '-'}</strong></td>
+                                <td style={{ whiteSpace: 'nowrap', padding: '0.65rem', textAlign: 'center' }}>
+                                  <div style={{ display: 'flex', gap: '0.35rem', justifyContent: 'center', alignItems: 'center', flexWrap: 'nowrap' }}>
                                     <button 
                                       className="btn-secondary" 
-                                      style={{ padding: '0.2rem 0.45rem', fontSize: '0.72rem', display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}
+                                      style={{ padding: '0.25rem 0.45rem', fontSize: '0.72rem', display: 'inline-flex', alignItems: 'center', gap: '0.2rem', whiteSpace: 'nowrap' }}
                                       onClick={() => {
                                         setStatsModalType(null);
                                         handleOpenEditForm(cand);
                                       }}
                                       title="과제 정보 및 심사패널 배정 수정"
                                     >
-                                      <Edit size={11} />
+                                      <Edit size={12} />
                                       수정
                                     </button>
                                     <button 
                                       className="btn-secondary" 
                                       style={{ 
-                                        padding: '0.2rem 0.45rem', 
+                                        padding: '0.25rem 0.45rem', 
                                         fontSize: '0.72rem', 
                                         display: 'inline-flex', 
                                         alignItems: 'center', 
-                                        gap: '0.25rem',
+                                        gap: '0.2rem',
                                         background: 'rgba(239, 68, 68, 0.15)',
                                         border: '1px solid rgba(239, 68, 68, 0.35)',
-                                        color: '#fca5a5'
+                                        color: '#fca5a5',
+                                        whiteSpace: 'nowrap'
                                       }}
                                       onClick={() => handleDeleteTask(cand)}
                                       title="과제 및 심사 배정 항목 삭제"
                                     >
-                                      <Trash2 size={11} color="#fca5a5" />
+                                      <Trash2 size={12} color="#fca5a5" />
                                       삭제
                                     </button>
                                   </div>
@@ -2252,11 +2274,11 @@ export default function App() {
                     </table>
                   </div>
 
-                  <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '1.5rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '1.25rem' }}>
                     <button 
                       className="btn-secondary" 
                       onClick={() => setStatsModalType(null)}
-                      style={{ padding: '0.5rem 1.5rem' }}
+                      style={{ padding: '0.5rem 1.75rem', fontWeight: 600 }}
                     >
                       닫기
                     </button>
