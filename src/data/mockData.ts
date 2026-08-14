@@ -342,11 +342,11 @@ export const submissions: Submission[] = [
 ];
 
 export const committees: Committee[] = [
-  { id: 'com1', candidateId: 'cand1', reviewer1Id: 'rev1', reviewer2Id: 'rev4', reviewer3Id: 'rev7', status: '평가중' }, // 김민지
-  { id: 'com2', candidateId: 'cand2', reviewer1Id: 'rev2', reviewer2Id: 'rev5', reviewer3Id: 'rev8', status: '평가중' }, // 이지훈
-  { id: 'com3', candidateId: 'cand3', reviewer1Id: 'rev3', reviewer2Id: 'rev6', reviewer3Id: 'rev9', status: '완료' },   // 박서준 (완료됨)
-  { id: 'com6', candidateId: 'cand6', reviewer1Id: 'rev1', reviewer2Id: 'rev5', reviewer3Id: 'rev7', status: '평가중' }, // 한지민
-  { id: 'com8', candidateId: 'cand8', reviewer1Id: 'rev3', reviewer2Id: 'rev4', reviewer3Id: 'rev8', status: '완료' }    // 강동원 (완료됨)
+  { id: 'com1', candidateId: 'cand1', reviewer1Id: 'rev2', reviewer2Id: 'rev6', reviewer3Id: 'rev12', status: '평가중' }, // 김민지 (A사) -> B사, D사, F사 위원 배정 (이해상충 배제)
+  { id: 'com2', candidateId: 'cand2', reviewer1Id: 'rev1', reviewer2Id: 'rev11', reviewer3Id: 'rev9', status: '평가중' }, // 이지훈 (B사) -> A사, F사, D사 위원 배정 (이해상충 배제)
+  { id: 'com3', candidateId: 'cand3', reviewer1Id: 'rev3', reviewer2Id: 'rev6', reviewer3Id: 'rev9', status: '완료' },   // 박서준 (C사) -> D사 위원 3인 배정 (이해상충 배제)
+  { id: 'com6', candidateId: 'cand6', reviewer1Id: 'rev10', reviewer2Id: 'rev5', reviewer3Id: 'rev9', status: '평가중' }, // 한지민 (A사) -> F사, B사, D사 위원 배정 (이해상충 배제)
+  { id: 'com8', candidateId: 'cand8', reviewer1Id: 'rev1', reviewer2Id: 'rev4', reviewer3Id: 'rev8', status: '완료' }    // 강동원 (D사) -> A사, A사, B사 위원 배정 (이해상충 배제)
 ];
 
 export const mockSecurityChecks: SecurityCheck[] = [
@@ -355,15 +355,15 @@ export const mockSecurityChecks: SecurityCheck[] = [
   { id: 'sc2', submissionId: 'sub3', reviewerId: 'rev6', check1: true, check2: true, check3: true, check4: true, check5: true, notes: '마스킹 정상 작동 확인' },
   { id: 'sc3', submissionId: 'sub3', reviewerId: 'rev9', check1: true, check2: true, check3: true, check4: true, check5: true, notes: '보안 규정 철저 준수' },
 
-  // 강동원(완료) 과제에 대한 rev3(비즈니스), rev4(기술), rev8(보안)의 보안체크
-  { id: 'sc4', submissionId: 'sub8', reviewerId: 'rev3', check1: true, check2: true, check3: true, check4: true, check5: true, notes: '비밀 데이터 마스킹 완료' },
+  // 강동원(완료) 과제에 대한 rev1(비즈니스-A), rev4(기술-A), rev8(보안-B)의 보안체크 (D사 위원 제외)
+  { id: 'sc4', submissionId: 'sub8', reviewerId: 'rev1', check1: true, check2: true, check3: true, check4: true, check5: true, notes: '비밀 데이터 마스킹 완료' },
   { id: 'sc5', submissionId: 'sub8', reviewerId: 'rev4', check1: true, check2: true, check3: true, check4: true, check5: true, notes: '소스코드 상 API Key 없음 확인' },
   { id: 'sc6', submissionId: 'sub8', reviewerId: 'rev8', check1: true, check2: true, check3: true, check4: true, check5: true, notes: '이상 무' }
 ];
 
 export const mockScores: Score[] = [
   // 박서준(cand3, com3) - Level 3
-  // 1. rev3 (Business Reviewer)
+  // 1. rev3 (Business Reviewer - D사)
   {
     id: 's1',
     committeeId: 'com3',
@@ -378,7 +378,7 @@ export const mockScores: Score[] = [
     isDisqualified: false,
     submittedAt: '2026-07-06 15:00'
   },
-  // 2. rev6 (Tech Reviewer)
+  // 2. rev6 (Tech Reviewer - D사)
   {
     id: 's2',
     committeeId: 'com3',
@@ -393,7 +393,7 @@ export const mockScores: Score[] = [
     isDisqualified: false,
     submittedAt: '2026-07-06 16:30'
   },
-  // 3. rev9 (Security Reviewer)
+  // 3. rev9 (Security Reviewer - D사)
   {
     id: 's3',
     committeeId: 'com3',
@@ -409,12 +409,12 @@ export const mockScores: Score[] = [
     submittedAt: '2026-07-06 17:00'
   },
 
-  // 강동원(cand8, com8) - Level 4
-  // 1. rev3 (Business Reviewer)
+  // 강동원(cand8, com8 - D사) - Level 4
+  // 1. rev1 (Business Reviewer - A사)
   {
     id: 's4',
     committeeId: 'com8',
-    reviewerId: 'rev3',
+    reviewerId: 'rev1',
     score1: 85, // Engineering
     score2: 85, // Security
     score3: 100, // Impact (비즈니스 기여 탁월)
@@ -425,7 +425,7 @@ export const mockScores: Score[] = [
     isDisqualified: false,
     submittedAt: '2026-07-07 10:00'
   },
-  // 2. rev4 (Tech Reviewer)
+  // 2. rev4 (Tech Reviewer - A사)
   {
     id: 's5',
     committeeId: 'com8',
@@ -440,7 +440,7 @@ export const mockScores: Score[] = [
     isDisqualified: false,
     submittedAt: '2026-07-07 11:20'
   },
-  // 3. rev8 (Security Reviewer)
+  // 3. rev8 (Security Reviewer - B사)
   {
     id: 's6',
     committeeId: 'com8',
@@ -477,7 +477,7 @@ const rawMockEvaluationResults: EvaluationResult[] = [
     passStatus: '합격',
     finalDecisionComment: 'L4 자격 요건에 부합하는 높은 난이도의 고장 예측 분석 모델을 구현하였으며, 현장 실측을 통해 5천만 원 이상의 실질적인 비용 절감을 증빙하였습니다. 만장일치로 합격 판정합니다.',
     reviewerScores: [
-      { reviewerId: 'rev3', reviewerName: '', specialty: '현업/비즈니스', score: 89.5, score1: 85, score2: 85, score3: 100 },
+      { reviewerId: 'rev1', reviewerName: '', specialty: '현업/비즈니스', score: 89.5, score1: 85, score2: 85, score3: 100 },
       { reviewerId: 'rev4', reviewerName: '', specialty: 'AI기술', score: 91, score1: 100, score2: 85, score3: 85 },
       { reviewerId: 'rev8', reviewerName: '', specialty: '보안/거버넌스', score: 89.5, score1: 85, score2: 100, score3: 85 }
     ]

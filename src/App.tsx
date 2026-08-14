@@ -627,22 +627,22 @@ export default function App() {
   // Detail Modal state for dashboard statistics
   const [statsModalType, setStatsModalType] = useState<'total' | 'completed' | 'evaluating' | 'pending' | null>(null);
 
-  // Auto Panel Assign logic (Conflict of Interest Prevention)
+  // Auto Panel Assign logic (Strict Conflict of Interest Prevention)
   const handleAutoAssignPanel = (affiliate: string) => {
-    // 1. Business reviewer (Prefer external expert or internal non-conflicting reviewer/admin)
+    // 1. Business reviewer (Strictly non-conflicting reviewer or external expert or admin)
     const bizReviewer = usersList.find(
       u => !u.isDeleted && (u.role === 'reviewer' || u.role === 'admin') && u.specialty === 'business' && (u.affiliate === 'EXTERNAL' || u.isExternal || u.affiliate !== affiliate)
-    ) || usersList.find(u => !u.isDeleted && (u.role === 'reviewer' || u.role === 'admin') && u.specialty === 'business');
+    );
     
-    // 2. Tech reviewer
+    // 2. Tech reviewer (Strictly non-conflicting reviewer or external expert)
     const techReviewer = usersList.find(
       u => !u.isDeleted && (u.role === 'reviewer' || u.role === 'admin') && u.specialty === 'tech' && (u.affiliate === 'EXTERNAL' || u.isExternal || u.affiliate !== affiliate)
-    ) || usersList.find(u => !u.isDeleted && (u.role === 'reviewer' || u.role === 'admin') && u.specialty === 'tech');
+    );
 
-    // 3. Security reviewer
+    // 3. Security reviewer (Strictly non-conflicting reviewer or external expert or admin)
     const secReviewer = usersList.find(
       u => !u.isDeleted && (u.role === 'reviewer' || u.role === 'admin') && u.specialty === 'security' && (u.affiliate === 'EXTERNAL' || u.isExternal || u.affiliate !== affiliate)
-    ) || usersList.find(u => !u.isDeleted && (u.role === 'reviewer' || u.role === 'admin') && u.specialty === 'security');
+    );
 
     if (bizReviewer) setNewReviewer1(bizReviewer.id);
     if (techReviewer) setNewReviewer2(techReviewer.id);
@@ -716,11 +716,10 @@ export default function App() {
       return;
     }
 
-    // REGISTER NEW REVIEWER
-    const newRevId = `rev_${Date.now()}`;
-
+    // CREATE NEW REVIEWER
+    const newReviewerId = `rev_${Date.now()}`;
     const newReviewer: User = {
-      id: newRevId,
+      id: newReviewerId,
       name: newRevName.trim(),
       email: newRevEmail.trim(),
       role: 'reviewer',
@@ -731,12 +730,11 @@ export default function App() {
       isDeleted: false
     };
 
-    const updatedUsers = [...usersList, newReviewer];
-    setUsersList(updatedUsers);
+    setUsersList(prev => [...prev, newReviewer]);
 
     if (isFirebaseConfigured && db) {
       try {
-        setDoc(doc(db, 'users', newRevId), newReviewer);
+        setDoc(doc(db, 'users', newReviewerId), newReviewer);
       } catch (e) {
         console.error('Error saving new reviewer to Firestore:', e);
       }
@@ -785,6 +783,22 @@ export default function App() {
     if (!newReviewer1 || !newReviewer2 || !newReviewer3) {
       alert('심사위원 패널 3인을 모두 지정해야 합니다.');
       return;
+    }
+
+    const r1 = usersList.find(u => u.id === newReviewer1);
+    const r2 = usersList.find(u => u.id === newReviewer2);
+    const r3 = usersList.find(u => u.id === newReviewer3);
+
+    const conflictingReviewers = [r1, r2, r3].filter(
+      r => r && r.affiliate !== 'EXTERNAL' && !r.isExternal && r.affiliate === newCandAffiliate
+    );
+
+    if (conflictingReviewers.length > 0) {
+      const conflictNames = conflictingReviewers.map(r => r?.name).join(', ');
+      const candAffName = AFFILIATES.find(a => a.code === newCandAffiliate)?.name || newCandAffiliate;
+      if (!window.confirm(`⚠️ [이해상충 제척 경고]\n\n선택된 심사위원 중 [${conflictNames}] 위원이 발표자 소속 관계사(${candAffName})와 동일합니다.\n공정하고 객관적인 심사를 위해 타 관계사 또는 외부 전문가 위원을 배정하는 것을 권장합니다.\n\n그래도 배정을 진행하시겠습니까?`)) {
+        return;
+      }
     }
 
     if (editingCandidateId) {
