@@ -1,18 +1,43 @@
-rules_version='2'
+rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /{document=**} {
-      // This rule allows anyone with your database reference to view, edit,
-      // and delete all data in your database. It is useful for getting
-      // started, but it is configured to expire after 30 days because it
-      // leaves your app open to attackers. At that time, all client
-      // requests to your database will be denied.
-      //
-      // Make sure to write security rules for your app before that time, or
-      // else all client requests to your database will be denied until you
-      // update your rules.
-      allow read, write: if request.time < timestamp.date(2026, 8, 19);
+    // AICA 자격심사 시스템 전용 데이터 컬렉션 규칙 (만료 기한 해제 및 상시 운영)
+    
+    // 1. 심사위원 및 사용자 계정 풀
+    match /users/{userId} {
+      allow read, write: if true;
+    }
+
+    // 2. 피평가자(지원자) 정보
+    match /candidates/{candId} {
+      allow read, write: if true;
+    }
+
+    // 3. 평가 과제 제출 정보
+    match /submissions/{subId} {
+      allow read, write: if true;
+    }
+
+    // 4. 심사위원회 및 3인 패널 배정 정보
+    match /committees/{commId} {
+      allow read, write: if true;
+    }
+
+    // 5. 보안 체크리스트 항목
+    match /securityChecks/{checkId} {
+      allow read, write: if true;
+    }
+
+    // 6. 심사위원 채점표 및 평가의견
+    match /scores/{scoreId} {
+      allow read, write: if true;
+    }
+
+    // 7. 종합 판정 결과 및 평가보고서
+    match /evaluationResults/{evalId} {
+      allow read, write: if true;
     }
   }
 }
+
